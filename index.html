@@ -310,8 +310,8 @@ function evHtml(o,top,pos){
         "background:var(--c"+c+"b);color:var(--c"+c+'f)">';
   h+='<div class="r1"><span>'+hm(st)+"</span><i>"+o.idx+"/"+o.series.count+"</i></div>";
   h+='<div class="nm">'+esc(o.series.name)+"</div>";
-  var meta=[tg,o.teacher?esc(o.teacher):""].filter(Boolean).join(" · ");
-  if(meta)h+='<div class="mt">'+meta+"</div>";
+  if(tg)h+='<div class="mt">'+tg+"</div>";
+  if(o.teacher)h+='<div class="mt">'+esc(o.teacher)+"</div>";
   if(nt)h+='<div class="note">'+nt+"</div>";
   return h+"</div>";
 }
