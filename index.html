@@ -290,6 +290,7 @@ function hourSpan(occ){
 function noteOf(o){
   if(o.cancel)return "отменено"+(o.note?" · "+esc(o.note):"");
   if(o.moved)return "перенос"+(o.note?" · "+esc(o.note):"");
+  if(o.sub)return "замена"+(o.note?" · "+esc(o.note):"");
   return esc(o.note);
 }
 /* метка на блоке: поток одной буквой и класс, если выбрано «все» */
