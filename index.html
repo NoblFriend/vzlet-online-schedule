@@ -110,7 +110,7 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
   .ev .note{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 }
 .ev.cancel .nm{text-decoration:line-through;opacity:.6}
-.ev.gh{background:transparent!important;border:1px dashed;opacity:.75;box-shadow:none!important}
+.ev.gh{background:var(--bg);background:color-mix(in srgb,currentColor 9%,var(--bg));border:1px dashed}
 .ev.gh .nm{text-decoration:line-through}
 .ev.gh .note{font-weight:600}
 .nowl{position:absolute;left:0;right:0;height:2px;background:#e5484d;z-index:2;pointer-events:none}
@@ -383,7 +383,8 @@ function chipHtml(o){
 function layoutDay(list){
   var ss=data.streams||[],comps=[],cur=null,lanes=0;
   list.sort(function(a,b){
-    return mins(a.time)-mins(b.time)||ss.indexOf(a.st)-ss.indexOf(b.st)||
+    /* призраки левее и ниже настоящих занятий */
+    return mins(a.time)-mins(b.time)||(a.ghost?0:1)-(b.ghost?0:1)||ss.indexOf(a.st)-ss.indexOf(b.st)||
            (a.series.group<b.series.group?-1:a.series.group>b.series.group?1:0);
   });
   list.forEach(function(o){
