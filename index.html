@@ -70,11 +70,12 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
 .ev{position:absolute;border-radius:6px;padding:4px 6px;font-size:11px;line-height:1.25;overflow:hidden;
   container-type:inline-size;height:var(--h);cursor:default;
   transition:left .18s ease,width .18s ease,box-shadow .18s ease}
-/* раскрытый блок: не уже 170px, поверх соседних дней; у дней справа раскрывается влево */
-@media (hover:hover){.ev:hover{left:2px!important;width:max(calc(100% - 4px),170px)!important;height:auto;
+/* наведение на компьютере — на ширину дня; тап на телефоне — до размера блока на компьютере
+   (около 112px), поверх соседних дней; у дней справа раскрывается влево */
+@media (hover:hover){.ev:hover{left:2px!important;width:calc(100% - 4px)!important;height:auto;
   min-height:var(--h);z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.18)}
   .ev.rt:hover{left:auto!important;right:2px}}
-.ev.open{left:2px!important;width:max(calc(100% - 4px),170px)!important;height:auto;min-height:var(--h);
+.ev.open{left:2px!important;width:max(calc(100% - 4px),112px)!important;height:auto;min-height:var(--h);
   z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.18)}
 .ev.rt.open{left:auto!important;right:2px}
 .ev .r1 span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
