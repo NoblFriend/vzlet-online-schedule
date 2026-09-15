@@ -61,7 +61,17 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
 .chip{font-size:12px;padding:3px 8px;border-radius:6px}
 .chip b{font-weight:600}
 .chip i{font-style:normal;opacity:.65;margin-left:4px;font-variant-numeric:tabular-nums}
-.skipb{font-size:12px;color:var(--fg2);padding:3px 4px}
+.skipb{flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px;padding:5px;border-radius:6px;
+  background:repeating-linear-gradient(135deg,var(--hatch) 0 1.5px,transparent 1.5px 7px)}
+.skl{background:var(--bg);color:var(--fg);font-size:12px;padding:2px 9px;border-radius:5px;
+  box-shadow:0 0 0 1px var(--line)}
+.skl b{font-weight:600}
+.cbody{position:relative}
+.offov{position:absolute;left:54px;right:0;top:0;bottom:0;z-index:4;display:flex;align-items:center;
+  justify-content:center;background:repeating-linear-gradient(135deg,var(--hatch) 0 1.5px,transparent 1.5px 9px)}
+.offl{display:flex;flex-direction:column;align-items:center;gap:6px}
+.offl .skl{font-size:15px;font-weight:600;padding:6px 16px;border-radius:8px}
+.skn{font-size:12px;color:var(--fg2);background:var(--bg);padding:1px 8px;border-radius:4px}
 .hl{position:absolute;right:6px;transform:translateY(-50%);font-variant-numeric:tabular-nums}
 .dcol{position:relative;border-left:1px solid var(--line);
   background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(var(--half) 1px,transparent 1px);
@@ -391,9 +401,13 @@ function layoutDay(list){
 function weekHtml(){
   var PAD=8,all=current(),i;
   var occ=all.filter(function(o){return iso(monday(o.date))===week;});
-  var skips=selStreams().filter(function(st){return seriesOf(st).length&&skipSet(st)[week];})
-    .map(function(st){var r=skipSet(st)[week];
-      return isBoth()?esc(st.name||st.id)+": "+esc(r):cap(esc(r))+", занятий нет";});
+  var active=selStreams().filter(function(st){return seriesOf(st).length;});
+  var skipSt=active.filter(function(st){return skipSet(st)[week];});
+  var allOff=skipSt.length>0&&skipSt.length===active.length&&!occ.length;
+  var skips=skipSt.map(function(st){
+    var why=esc(cap(skipSet(st)[week]));
+    return '<span class="skl">'+(isBoth()?'<b>'+esc(shortName(st))+"</b> \u00b7 ":"")+why+"</span>";
+  });
   var r=hourSpan(all,occ),H=(r.h1-r.h0)*60,tk=iso(today()),w0=D(week);
   var now=new Date(),nowM=now.getHours()*60+now.getMinutes();
   var days=[];
@@ -409,13 +423,16 @@ function weekHtml(){
   }
   h+="</div>";
   var tbd=occ.filter(function(o){return o.tbd;});
-  if(skips.length||tbd.length){
+  if((skips.length&&!allOff)||tbd.length){
     h+='<div class="crow allday"><div class="gut">'+(tbd.length?"без<br>времени":"")+'</div><div class="adc">';
-    skips.forEach(function(t){h+='<div class="skipb">'+t+"</div>";});
+    if(skips.length&&!allOff)h+='<div class="skipb">'+skips.join("")+"</div>";
     tbd.forEach(function(o){h+=chipHtml(o);});
     h+="</div></div>";
   }
-  h+='<div class="crow" style="height:'+(H+2*PAD)+'px"><div class="gut">';
+  h+='<div class="crow cbody" style="height:'+(H+2*PAD)+'px">';
+  /* вся неделя без занятий: один заштрихованный слой поверх сетки, чтобы узор не рвался по дням */
+  if(allOff)h+='<div class="offov"><div class="offl">'+skips.join("")+'<span class="skn">занятий нет</span></div></div>';
+  h+='<div class="gut">';
   for(var hr=r.h0;hr<r.h1;hr++)h+='<div class="hl" style="top:'+((hr-r.h0)*60+PAD)+'px">'+hr+":00</div>";
   h+="</div>";
   for(i=0;i<7;i++){
