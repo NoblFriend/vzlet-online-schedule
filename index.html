@@ -44,8 +44,8 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
 .cur{font-size:12px;color:var(--fg3)}
 
 .cal{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px}
-.cgrid{min-width:540px}
-.crow{display:grid;grid-template-columns:54px repeat(7,minmax(0,1fr))}
+.cgrid{min-width:540px;--cols:54px repeat(7,minmax(0,1fr))}
+.crow{display:grid;grid-template-columns:var(--cols)}
 .gut{position:sticky;left:0;z-index:3;background:var(--bg);font-size:10px;color:var(--fg3);
   text-align:right;padding-right:6px}
 .chead{border-bottom:1px solid var(--line)}
@@ -66,11 +66,17 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
   background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(var(--half) 1px,transparent 1px);
   background-size:100% 60px,100% 30px;background-position:0 8px,0 8px;background-repeat:repeat-y}
 .dcol.td{background-color:var(--today)}
-.ev{position:absolute;border-radius:6px;padding:3px 5px;font-size:11px;line-height:1.25;overflow:hidden}
-.ev .r1{display:flex;flex-wrap:wrap;justify-content:space-between;column-gap:4px;font-weight:600;font-variant-numeric:tabular-nums}
+.ev{position:absolute;border-radius:6px;padding:4px 6px;font-size:11px;line-height:1.25;overflow:hidden;
+  container-type:inline-size}
+.ev .r1{display:flex;justify-content:space-between;gap:4px;font-weight:600;font-variant-numeric:tabular-nums}
 .ev .r1 i{font-style:normal;font-weight:400;opacity:.65}
-.ev .nm{font-weight:600;font-size:12px;hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word}
-.ev .tc{opacity:.8}
+.ev .nm{font-weight:600;font-size:12px;overflow-wrap:break-word;margin-top:1px}
+.ev .mt{opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.etag{font-weight:600}
+@container (max-width:86px){
+  .ev .r1 i{display:none}
+  .ev .nm{font-size:11px}
+}
 .ev.cancel .nm{text-decoration:line-through;opacity:.6}
 .nowl{position:absolute;left:0;right:0;height:2px;background:#e5484d;z-index:2;pointer-events:none}
 .nowl::before{content:"";position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:4px;background:#e5484d}
@@ -109,10 +115,6 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
 .tsec{grid-column:1 / -1;background:var(--panel);border-top:1px solid var(--line);border-bottom:1px solid var(--line);
   font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--fg2);padding:5px 0}
 .tsec span{position:sticky;left:12px;padding-left:12px}
-.stg{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:0 3px;border-radius:3px;
-  border:1px solid currentColor;opacity:.75;line-height:13px;margin-right:4px;white-space:nowrap}
-.ev .r1 .stg{margin:0 auto 0 0}
-.ev .r1 span{margin-right:4px}
 @media (max-width:560px){.tl{--tn:128px}.tn{padding:8px}}
 .msg.err{font-size:13px;color:var(--danger)}
 </style>
@@ -272,31 +274,64 @@ function noteOf(o){
   return esc(o.note);
 }
 /* метка на блоке: поток одной буквой и класс, если выбрано «все» */
-function stTag(o){
+/* метка потока одной буквой и класса — только когда выбрано несколько */
+function tagOf(o){
   var t=[];
   if(isBoth())t.push(esc(shortName(o.st)));
   if(allG())t.push(esc(o.series.group));
-  return t.length?'<b class="stg" title="'+esc(o.st.name)+", "+esc(o.series.group)+'">'+t.join(" ")+"</b>":"";
+  return t.length?'<b class="etag">'+t.join(" ")+"</b>":"";
 }
 
 function evHtml(o,top,pos){
-  var c=o.series.color||1,st=mins(o.time),en=st+dur(o);
+  var c=o.series.color||1,st=mins(o.time),en=st+dur(o),tg=tagOf(o),nt=noteOf(o);
   var h='<div class="ev'+(o.cancel?" cancel":"")+'" title="'+esc(o.series.name)+", "+hm(st)+"–"+hm(en)+
-        (isBoth()?", "+esc(o.st.name):"")+'" style="top:'+top+"px;height:"+(dur(o)-2)+"px;"+pos+
+        (o.teacher?", "+esc(o.teacher):"")+(isBoth()||allG()?", "+esc(o.st.name)+" "+esc(o.series.group):"")+
+        ", занятие "+o.idx+" из "+o.series.count+'" style="top:'+top+"px;height:"+(dur(o)-2)+"px;"+pos+
         "background:var(--c"+c+"b);color:var(--c"+c+'f)">';
-  h+='<div class="r1"><span>'+hm(st)+"</span>"+stTag(o)+"<i>"+o.idx+"/"+o.series.count+"</i></div>";
+  h+='<div class="r1"><span>'+hm(st)+"</span><i>"+o.idx+"/"+o.series.count+"</i></div>";
   h+='<div class="nm">'+esc(o.series.name)+"</div>";
-  if(o.teacher)h+='<div class="tc">'+esc(o.teacher)+"</div>";
-  var nt=noteOf(o);
+  var meta=[tg,o.teacher?esc(o.teacher):""].filter(Boolean).join(" · ");
+  if(meta)h+='<div class="mt">'+meta+"</div>";
   if(nt)h+='<div class="note">'+nt+"</div>";
   return h+"</div>";
 }
 
 function chipHtml(o){
-  var c=o.series.color||1,nt=noteOf(o);
-  return '<span class="chip" style="background:var(--c'+c+"b);color:var(--c"+c+'f)">'+stTag(o)+"<b>"+
+  var c=o.series.color||1,nt=noteOf(o),tg=tagOf(o);
+  return '<span class="chip" style="background:var(--c'+c+"b);color:var(--c"+c+'f)">'+(tg?tg+" · ":"")+"<b>"+
          esc(o.series.name)+"</b>"+(o.teacher?" · "+esc(o.teacher):"")+
          (nt?" · "+nt:"")+"<i>"+o.idx+"/"+o.series.count+"</i></span>";
+}
+
+/* раскладка дня как в календарях: колонки только у реально пересекающихся занятий,
+   блок растягивается вправо, пока там свободно. Возвращает число параллельных колонок */
+function layoutDay(list){
+  var ss=data.streams||[],comps=[],cur=null,lanes=0;
+  list.sort(function(a,b){
+    return mins(a.time)-mins(b.time)||ss.indexOf(a.st)-ss.indexOf(b.st)||
+           (a.series.group<b.series.group?-1:a.series.group>b.series.group?1:0);
+  });
+  list.forEach(function(o){
+    o.s0=mins(o.time);o.e0=o.s0+dur(o);
+    if(!cur||o.s0>=cur.end){cur={end:o.e0,cols:[],items:[]};comps.push(cur);}
+    var c=0;
+    while(c<cur.cols.length&&cur.cols[c]>o.s0)c++;
+    cur.cols[c]=o.e0;o.col=c;
+    cur.items.push(o);cur.end=Math.max(cur.end,o.e0);
+  });
+  comps.forEach(function(cp){
+    var n=cp.cols.length;
+    lanes=Math.max(lanes,n);
+    cp.items.forEach(function(o){
+      var sp=1;
+      for(var k=o.col+1;k<n;k++){
+        if(cp.items.some(function(x){return x.col===k&&x.s0<o.e0&&x.e0>o.s0;}))break;
+        sp++;
+      }
+      o.n=n;o.span=sp;
+    });
+  });
+  return lanes;
 }
 
 function weekHtml(){
@@ -307,7 +342,15 @@ function weekHtml(){
       return isBoth()?esc(st.name||st.id)+": "+esc(r):cap(esc(r))+", занятий нет";});
   var r=hourSpan(all),H=(r.h1-r.h0)*60,tk=iso(today()),w0=D(week);
   var now=new Date(),nowM=now.getHours()*60+now.getMinutes();
-  var h='<div class="cal"><div class="cgrid"><div class="crow chead"><div class="gut"></div>';
+  var days=[],w=[];
+  for(i=0;i<7;i++){
+    days[i]=occ.filter(function(o){return !o.tbd&&wdIdx(o.date)===i;});
+    var ln=layoutDay(days[i]);
+    w[i]=ln?ln:0.6;   /* день шире, если занятия идут параллельно; пустой — уже */
+  }
+  var tot=w.reduce(function(a,b){return a+b;},0);
+  var h='<div class="cal"><div class="cgrid" style="--cols:54px '+w.map(function(x){return "minmax(0,"+x+"fr)";}).join(" ")+
+        ";min-width:"+Math.max(540,Math.round(54+tot*84))+'px"><div class="crow chead"><div class="gut"></div>';
   for(i=0;i<7;i++){
     var dd=addD(w0,i);
     h+='<div class="dhd'+(iso(dd)===tk?" td":"")+'"><span class="dw">'+WDS[i]+
@@ -326,25 +369,10 @@ function weekHtml(){
   h+="</div>";
   for(i=0;i<7;i++){
     var d=addD(w0,i),isT=iso(d)===tk;
-    var list=occ.filter(function(o){return !o.tbd&&wdIdx(o.date)===i;})
-      .sort(function(a,b){return mins(a.time)-mins(b.time);});
-    /* начавшиеся почти одновременно делят ширину, более поздние ложатся поверх со сдвигом */
-    var cl=[];
-    list.forEach(function(o){
-      var st=mins(o.time),c=cl[cl.length-1];
-      if(c&&st-c.start<40){c.items.push(o);c.end=Math.max(c.end,st+dur(o));}
-      else cl.push({start:st,end:st+dur(o),items:[o]});
-    });
     h+='<div class="dcol'+(isT?" td":"")+'">';
-    cl.forEach(function(c,ci){
-      var dp=0,n=c.items.length;
-      for(var k=0;k<ci;k++)if(cl[k].end>c.start)dp++;
-      c.items.forEach(function(o,ii){
-        var off=dp*18,base="(100% - "+off+"px)";
-        var pos="left:calc("+off+"px + "+base+" * "+(ii/n)+" + 2px);width:calc("+base+" * "+(1/n)+" - 4px);"+
-                (dp?"z-index:"+(dp+1)+";box-shadow:0 0 0 1.5px var(--bg);":"");
-        h+=evHtml(o,mins(o.time)-r.h0*60+PAD,pos);
-      });
+    days[i].forEach(function(o){
+      var pos="left:calc("+(o.col/o.n*100)+"% + 2px);width:calc("+(o.span/o.n*100)+"% - 4px);";
+      h+=evHtml(o,o.s0-r.h0*60+PAD,pos);
     });
     if(isT&&nowM>=r.h0*60&&nowM<=r.h1*60)h+='<div class="nowl" style="top:'+(nowM-r.h0*60+PAD)+'px"></div>';
     h+="</div>";
@@ -353,7 +381,7 @@ function weekHtml(){
 }
 
 /* порядок предметов в таймлайне; предмет берётся из поля subject или угадывается по названию */
-var SUBJ=[["sferka",/сферк/i],["nebmeh",/небмех|небесн/i],["astro",/астро/i],["optics",/оптик/i],["practice",/практ|прак/i]];
+var SUBJ=[["sferka",/сферк/i],["nebmeh",/небмех|небесн/i],["astro",/астро/i],["optics",/оптик/i],["prac",/прак|prac/i]];
 function subjRank(s){
   for(var i=0;i<SUBJ.length;i++)
     if(s.subject?s.subject===SUBJ[i][0]:SUBJ[i][1].test(s.name))return i;
