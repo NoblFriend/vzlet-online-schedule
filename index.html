@@ -33,6 +33,7 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
   padding:5px 11px;border-radius:7px;cursor:pointer;white-space:nowrap}
 .seg button.on{background:var(--bg);color:var(--fg);font-weight:600;box-shadow:var(--sh)}
 .seg.right{margin-left:auto}
+.hint{flex-basis:100%;font-size:11px;color:var(--fg3);margin-top:-2px}
 
 .nav{display:flex;align-items:center;gap:8px;margin:0 0 14px}
 .arw{width:30px;height:30px;padding:0;line-height:1;border:1px solid var(--line2);background:var(--bg);
@@ -256,7 +257,8 @@ function barHtml(gs){
   var gg=gs.map(function(x){return {v:x,t:x};}),tip="Ctrl/\u2318 + клик или долгое нажатие \u2014 выбрать несколько";
   return seg(ss,selS,"data-s",0,tip)+
          seg(gg,selG,"data-g",0,tip)+
-         seg([{v:"week",t:"неделя"},{v:"all",t:"все занятия"}],[view],"data-v",1);
+         seg([{v:"week",t:"неделя"},{v:"all",t:"все занятия"}],[view],"data-v",1)+
+         (ss.length>1||gg.length>1?'<div class="hint">Несколько сразу: Ctrl/\u2318 + клик или долгое нажатие</div>':"");
 }
 
 function navHtml(){

@@ -1,7 +1,7 @@
 var SCHEDULE =
 {
   "title": "Расписание",
-  "subtitle": "Взлёт",
+  "subtitle": "Взлёт · Онлайн поток · Сезон 26/27",
   "streams": [
     {
       "id": "vseros",
