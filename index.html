@@ -131,7 +131,7 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
 var WDS=["пн","вт","ср","чт","пт","сб","вс"];
 var MG=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
 var MN=["январь","февраль","март","апрель","май","июнь","июль","август","сентябрь","октябрь","ноябрь","декабрь"];
-var BOTH="both";
+var ALL="*";
 
 var data={streams:[],overrides:[]},stream=null,group=null,view="week",week=null;
 
@@ -151,7 +151,9 @@ function hm(m){return Math.floor(m/60)+":"+("0"+m%60).slice(-2);}
 function dur(o){return o.series.duration||data.duration||90;}
 function cap(t){t=String(t);return t.charAt(0).toUpperCase()+t.slice(1);}
 
-function isBoth(){return stream===BOTH;}
+function isBoth(){return stream===ALL;}
+function allG(){return group===ALL;}
+function shortName(st){return st.short||String(st.name||st.id).charAt(0).toUpperCase();}
 function selStreams(){
   var ss=data.streams||[];
   if(isBoth())return ss;
@@ -197,7 +199,10 @@ function occurrences(s,st,sk){
   return out;
 }
 
-function seriesOf(st){return (st.series||[]).filter(function(s){return s.group===group;});}
+function seriesOf(st,g){
+  g=g||group;
+  return (st.series||[]).filter(function(s){return g===ALL||s.group===g;});
+}
 
 function current(){
   var out=[];
@@ -231,9 +236,11 @@ function seg(items,cur,attr,right){
 
 function barHtml(gs){
   var ss=(data.streams||[]).map(function(x){return {v:x.id,t:x.name||x.id};});
-  if(ss.length>1)ss.push({v:BOTH,t:"оба"});
+  if(ss.length>1)ss.push({v:ALL,t:"все"});
+  var gg=gs.map(function(x){return {v:x,t:x};});
+  if(gg.length>1)gg.push({v:ALL,t:"все"});
   return seg(ss,stream,"data-s")+
-         seg(gs.map(function(x){return {v:x,t:x};}),group,"data-g")+
+         seg(gg,group,"data-g")+
          seg([{v:"week",t:"неделя"},{v:"all",t:"все занятия"}],view,"data-v",1);
 }
 
@@ -268,7 +275,13 @@ function noteOf(o){
   if(o.moved)return "перенос"+(o.note?" · "+esc(o.note):"");
   return esc(o.note);
 }
-function stTag(o){return isBoth()?'<b class="stg">'+esc(o.st.name||o.st.id)+"</b>":"";}
+/* метка на блоке: поток одной буквой и класс, если выбрано «все» */
+function stTag(o){
+  var t=[];
+  if(isBoth())t.push(esc(shortName(o.st)));
+  if(allG())t.push(esc(o.series.group));
+  return t.length?'<b class="stg" title="'+esc(o.st.name)+", "+esc(o.series.group)+'">'+t.join(" ")+"</b>":"";
+}
 
 function evHtml(o,top,pos){
   var c=o.series.color||1,st=mins(o.time),en=st+dur(o);
@@ -350,8 +363,9 @@ function slotLabel(s){return s.time?WDS[wdIdx(D(s.start))]+" "+s.time:"врем�
 function gridHtml(){
   var cw=curWeek(),secs=[],allOcc=[];
   selStreams().forEach(function(st){
-    var sk=skipSet(st);
-    var rows=seriesOf(st).map(function(s){return {s:s,occ:occurrences(s,st,sk)};})
+   var sk=skipSet(st);
+   groupsOf([st]).filter(function(g){return allG()||g===group;}).forEach(function(g){
+    var rows=seriesOf(st,g).map(function(s){return {s:s,occ:occurrences(s,st,sk)};})
       .filter(function(r){return r.occ.length;});
     if(!rows.length)return;
     rows.sort(function(a,b){
@@ -364,7 +378,8 @@ function gridHtml(){
     allOcc=allOcc.concat(own);
     var ss=span(own),on={};
     Object.keys(sk).forEach(function(w){if(w>=ss.min&&w<=ss.max)on[w]=sk[w];});
-    secs.push({st:st,sk:on,rows:rows});
+    secs.push({st:st,g:g,sk:on,rows:rows});
+   });
   });
   if(!secs.length)return '<div class="empty">Занятий нет.</div>';
   var sp=span(allOcc),weeks=[];
@@ -385,8 +400,11 @@ function gridHtml(){
   });
   R=3;
   secs.forEach(function(sec,si){
-    if(isBoth()){
-      h+='<div class="tsec" style="grid-row:'+R+'"><span>'+esc(sec.st.name||sec.st.id)+"</span></div>";
+    if(isBoth()||allG()){
+      var ttl=[];
+      if(isBoth())ttl.push(esc(sec.st.name||sec.st.id));
+      if(allG())ttl.push(esc(sec.g));
+      h+='<div class="tsec" style="grid-row:'+R+'"><span>'+ttl.join(" \u00b7 ")+"</span></div>";
       R++;
     }
     var r0=R,n=sec.rows.length;
@@ -400,7 +418,7 @@ function gridHtml(){
     }
     var last=null;
     sec.rows.forEach(function(r,ri){
-      var s=r.s,c=s.color||1,k=colKey(s),sep=(ri>0&&k!==last)||(ri===0&&si>0&&!isBoth()),by={};
+      var s=r.s,c=s.color||1,k=colKey(s),sep=(ri>0&&k!==last)||(ri===0&&si>0&&!isBoth()&&!allG()),by={};
       last=k;
       r.occ.forEach(function(o){var w=iso(monday(o.date));(by[w]=by[w]||[]).push(o);});
       h+='<div class="tn'+(sep?" sep":"")+'" style="grid-row:'+R+';grid-column:1"><div class="nm">'+esc(s.name)+
@@ -411,7 +429,7 @@ function gridHtml(){
         if(!list){h+='<div class="'+cls+'" '+pos+"></div>";return;}
         var o=list[0],pv=wi>0&&by[weeks[wi-1]],nx=wi<N-1&&by[weeks[wi+1]];
         var nums=list.map(function(x){return x.idx;}).join(",");
-        var tip=esc(s.name)+(isBoth()?" ("+esc(sec.st.name)+")":"")+", занятие "+nums+" из "+s.count+
+        var tip=esc(s.name)+(isBoth()||allG()?" ("+esc(sec.st.name)+", "+esc(sec.g)+")":"")+", занятие "+nums+" из "+s.count+
                 (o.tbd?"":", "+WDS[wdIdx(o.date)]+" "+fmt(o.date)+" "+esc(o.time))+
                 (o.cancel?", отменено":"")+(o.note?", "+esc(o.note):"");
         h+='<div class="'+cls+'" '+pos+'><div class="tbar'+(pv?"":" l")+(nx?"":" r")+(o.cancel?" x":"")+
@@ -426,10 +444,10 @@ function gridHtml(){
 
 function render(){
   var ss=data.streams||[],ids=ss.map(function(x){return x.id;});
-  if(ss.length>1)ids.push(BOTH);
+  if(ss.length>1)ids.push(ALL);
   if(ids.indexOf(stream)<0)stream=ids[0]||null;
   var gs=groupsOf(selStreams());
-  if(gs.indexOf(group)<0)group=gs[0]||null;
+  if(gs.indexOf(group)<0&&!(group===ALL&&gs.length>1))group=gs[0]||null;
   var sp=span(current());
   if(!week)week=curWeek();
   if(sp){if(week<sp.min)week=sp.min;if(week>sp.max)week=sp.max;}
