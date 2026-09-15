@@ -145,7 +145,12 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
   <div id="view"></div>
   <div class="msg err" id="msg"></div>
 </div>
-<script src="schedule.js"></script>
+<script>
+/* на сайте грузим данные с меткой времени, чтобы браузер не показывал старую копию из кэша;
+   при открытии файла с диска — как есть */
+if(/^https?:/.test(location.protocol))document.write('<script src="schedule.js?v='+Date.now()+'"><\/script>');
+else document.write('<script src="schedule.js"><\/script>');
+</script>
 <script>
 var WDS=["пн","вт","ср","чт","пт","сб","вс"];
 var MG=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
