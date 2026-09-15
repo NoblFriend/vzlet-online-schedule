@@ -70,10 +70,14 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
 .ev{position:absolute;border-radius:6px;padding:4px 6px;font-size:11px;line-height:1.25;overflow:hidden;
   container-type:inline-size;height:var(--h);cursor:default;
   transition:left .18s ease,width .18s ease,box-shadow .18s ease}
-@media (hover:hover){.ev:hover{left:2px!important;width:calc(100% - 4px)!important;height:auto;min-height:var(--h);
-  z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.18)}}
-.ev.open{left:2px!important;width:calc(100% - 4px)!important;height:auto;min-height:var(--h);
+/* раскрытый блок: не уже 170px, поверх соседних дней; у дней справа раскрывается влево */
+@media (hover:hover){.ev:hover{left:2px!important;width:max(calc(100% - 4px),170px)!important;height:auto;
+  min-height:var(--h);z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+  .ev.rt:hover{left:auto!important;right:2px}}
+.ev.open{left:2px!important;width:max(calc(100% - 4px),170px)!important;height:auto;min-height:var(--h);
   z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.ev.rt.open{left:auto!important;right:2px}
+.ev .r1 span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .chg{margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .chh{font-size:12px;font-weight:600;color:var(--fg2);margin-bottom:6px}
 .chr{display:flex;gap:9px;align-items:flex-start;padding:5px 0;border-top:1px solid var(--line)}
@@ -280,14 +284,17 @@ function navHtml(){
 }
 
 /* диапазон часов считается по всему курсу, чтобы сетка не прыгала при листании недель */
-function hourSpan(occ){
+/* шкала по обычному расписанию курсов; если на показанной неделе что-то перенесено за её пределы,
+   расширяется только для этой недели */
+function hourSpan(all,wk){
   var a=null,b=null;
-  occ.forEach(function(o){
-    if(o.tbd)return;
-    var st=mins(o.time),en=st+dur(o);
+  function add(t,d){
+    var st=mins(t),en=st+d;
     if(a===null||st<a)a=st;
     if(b===null||en>b)b=en;
-  });
+  }
+  all.forEach(function(o){if(o.origTime)add(o.origTime,dur(o));});
+  wk.forEach(function(o){if(!o.tbd)add(o.time,dur(o));});
   if(a===null){a=17*60;b=20*60;}
   return {h0:Math.max(0,Math.floor((a-30)/60)),h1:Math.min(24,Math.ceil((b+30)/60))};
 }
@@ -301,19 +308,17 @@ function noteOf(o){
 /* метка на блоке: поток одной буквой и класс, если выбрано «все» */
 /* метка потока одной буквой и класса — только когда выбрано несколько */
 function tagOf(o){
-  var t=[];
-  if(isBoth())t.push(esc(shortName(o.st)));
-  if(allG())t.push(esc(o.series.group));
+  var t=[esc(shortName(o.st)),esc(o.series.group)];
   return t.length?'<b class="etag">'+t.join(" ")+"</b>":"";
 }
 
-function evHtml(o,top,pos){
+function evHtml(o,top,pos,rt){
   var c=o.series.color||1,st=mins(o.time),en=st+dur(o),tg=tagOf(o),nt=noteOf(o);
-  var h='<div class="ev'+(o.cancel?" cancel":"")+'" title="'+esc(o.series.name)+", "+hm(st)+"–"+hm(en)+
+  var h='<div class="ev'+(o.cancel?" cancel":"")+(rt?" rt":"")+'" title="'+esc(o.series.name)+", "+hm(st)+"–"+hm(en)+
         (o.teacher?", "+esc(o.teacher):"")+(isBoth()||allG()?", "+esc(o.st.name)+" "+esc(o.series.group):"")+
         ", занятие "+o.idx+" из "+o.series.count+'" style="top:'+top+"px;--h:"+(dur(o)-2)+"px;"+pos+
         "background:var(--c"+c+"b);color:var(--c"+c+'f)">';
-  h+='<div class="r1"><span>'+hm(st)+"</span><i>"+o.idx+"/"+o.series.count+"</i></div>";
+  h+='<div class="r1"><span>'+hm(st)+"\u2013"+hm(en)+"</span><i>"+o.idx+"/"+o.series.count+"</i></div>";
   h+='<div class="nm">'+esc(o.series.name)+"</div>";
   if(tg)h+='<div class="mt">'+tg+"</div>";
   if(o.teacher)h+='<div class="mt">'+esc(o.teacher)+"</div>";
@@ -388,7 +393,7 @@ function weekHtml(){
   var skips=selStreams().filter(function(st){return seriesOf(st).length&&skipSet(st)[week];})
     .map(function(st){var r=skipSet(st)[week];
       return isBoth()?esc(st.name||st.id)+": "+esc(r):cap(esc(r))+", занятий нет";});
-  var r=hourSpan(all),H=(r.h1-r.h0)*60,tk=iso(today()),w0=D(week);
+  var r=hourSpan(all,occ),H=(r.h1-r.h0)*60,tk=iso(today()),w0=D(week);
   var now=new Date(),nowM=now.getHours()*60+now.getMinutes();
   var days=[];
   for(i=0;i<7;i++){
@@ -420,7 +425,7 @@ function weekHtml(){
       var off=Math.min(o.col,2)*30;
       var pos="left:calc("+off+"% + 2px);width:calc("+(100-off)+"% - 4px);"+
               (o.col?"z-index:"+(o.col+1)+";box-shadow:0 0 0 1.5px var(--bg),-3px 3px 8px rgba(0,0,0,.14);":"");
-      h+=evHtml(o,o.s0-r.h0*60+PAD,pos);
+      h+=evHtml(o,o.s0-r.h0*60+PAD,pos,i>=4);
     });
     if(isT&&nowM>=r.h0*60&&nowM<=r.h1*60)h+='<div class="nowl" style="top:'+(nowM-r.h0*60+PAD)+'px"></div>';
     h+="</div>";
