@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Расписание</title>
+<style>
+:root{
+  --bg:#ffffff;--fg:#1b1b1a;--fg2:#6b6b66;--fg3:#96968f;
+  --line:#e4e4de;--line2:#c8c8c0;--panel:#f1f1ec;--danger:#8c2b2b;--skip:#eeeeea;
+  --sh:0 1px 2px rgba(0,0,0,.10);--half:#f3f3ef;--hatch:#d9d9d2;--today:#fafaf6;
+  --c1b:#cfe0f7;--c1f:#123157;--c2b:#cfe8d6;--c2f:#123d1e;--c3b:#f6dada;--c3f:#5a1414;
+  --c4b:#e1d8f1;--c4f:#2f1a57;--c5b:#f6e2c7;--c5f:#573814;--c6b:#d7e8ea;--c6f:#123a3e;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#1a1a18;--fg:#eceae6;--fg2:#a2a29a;--fg3:#78786f;
+  --line:#32322e;--line2:#4a4a44;--panel:#232320;--danger:#e08b8b;--skip:#2a2a27;
+  --sh:0 1px 2px rgba(0,0,0,.40);--half:#242421;--hatch:#3a3a35;--today:#1f1f1c;
+  --c1b:#1e3350;--c1f:#cfe0f7;--c2b:#1c3c26;--c2f:#cfe8d6;--c3b:#452020;--c3f:#f6dada;
+  --c4b:#302548;--c4f:#e1d8f1;--c5b:#45330f;--c5f:#f6e2c7;--c6b:#1b3a3d;--c6f:#d7e8ea;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
+.wrap{max-width:880px;margin:0 auto;padding:16px 14px 56px}
+h1{font-size:19px;font-weight:600;margin:0 0 2px}
+.sub{color:var(--fg2);font-size:13px;margin:0 0 14px}
+
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 16px}
+.seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:2px}
+.seg button{border:0;background:transparent;color:var(--fg2);font-family:inherit;font-size:13px;
+  padding:5px 11px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:var(--bg);color:var(--fg);font-weight:600;box-shadow:var(--sh)}
+.seg.right{margin-left:auto}
+
+.nav{display:flex;align-items:center;gap:8px;margin:0 0 14px}
+.arw{width:30px;height:30px;padding:0;line-height:1;border:1px solid var(--line2);background:var(--bg);
+  color:var(--fg);border-radius:8px;font-size:17px;font-family:inherit;cursor:pointer}
+.arw[disabled]{opacity:.3;cursor:default}
+.wt{font-size:16px;font-weight:600;flex:1;margin-left:3px}
+.tdy{border:1px solid var(--line2);background:var(--bg);color:var(--fg2);border-radius:8px;
+  font-family:inherit;font-size:12px;padding:5px 10px;cursor:pointer}
+.cur{font-size:12px;color:var(--fg3)}
+
+.cal{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px}
+.cgrid{min-width:540px}
+.crow{display:grid;grid-template-columns:54px repeat(7,minmax(0,1fr))}
+.gut{position:sticky;left:0;z-index:3;background:var(--bg);font-size:10px;color:var(--fg3);
+  text-align:right;padding-right:6px}
+.chead{border-bottom:1px solid var(--line)}
+.dhd{padding:7px 2px 6px;text-align:center;border-left:1px solid var(--line);line-height:1.15}
+.dhd .dw{display:block;font-size:11px;color:var(--fg2)}
+.dhd .dn{display:inline-block;font-size:15px;font-weight:600;min-width:26px;height:26px;line-height:26px;
+  border-radius:13px;margin-top:2px;padding:0 4px}
+.dhd.td .dn{background:var(--fg);color:var(--bg)}
+.allday{border-bottom:1px solid var(--line)}
+.allday .gut{display:flex;align-items:center;justify-content:flex-end;line-height:1.1;padding:4px 6px 4px 0}
+.adc{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:4px;padding:5px;border-left:1px solid var(--line)}
+.chip{font-size:12px;padding:3px 8px;border-radius:6px}
+.chip b{font-weight:600}
+.chip i{font-style:normal;opacity:.65;margin-left:4px;font-variant-numeric:tabular-nums}
+.skipb{font-size:12px;color:var(--fg2);padding:3px 4px}
+.hl{position:absolute;right:6px;transform:translateY(-50%);font-variant-numeric:tabular-nums}
+.dcol{position:relative;border-left:1px solid var(--line);
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(var(--half) 1px,transparent 1px);
+  background-size:100% 60px,100% 30px;background-position:0 8px,0 8px;background-repeat:repeat-y}
+.dcol.td{background-color:var(--today)}
+.ev{position:absolute;border-radius:6px;padding:3px 5px;font-size:11px;line-height:1.25;overflow:hidden}
+.ev .r1{display:flex;flex-wrap:wrap;justify-content:space-between;column-gap:4px;font-weight:600;font-variant-numeric:tabular-nums}
+.ev .r1 i{font-style:normal;font-weight:400;opacity:.65}
+.ev .nm{font-weight:600;font-size:12px;hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word}
+.ev .tc{opacity:.8}
+.ev.cancel .nm{text-decoration:line-through;opacity:.6}
+.nowl{position:absolute;left:0;right:0;height:2px;background:#e5484d;z-index:2;pointer-events:none}
+.nowl::before{content:"";position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:4px;background:#e5484d}
+.empty{color:var(--fg2);font-size:14px;padding:16px 0}
+
+.tl{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px;--tn:190px}
+.tg{display:grid;min-width:min-content}
+.tg>div{min-width:0}
+.tn{position:sticky;left:0;z-index:2;background:var(--bg);padding:8px 12px 8px 12px;border-right:1px solid var(--line)}
+.tn .nm{font-weight:600;font-size:13px;line-height:1.25}
+.tn .mt{font-size:11px;color:var(--fg2);margin-top:1px}
+.tn.hd{border-bottom:1px solid var(--line)}
+.tmo{font-size:11px;color:var(--fg2);padding:8px 6px 0;border-left:1px solid var(--line);white-space:nowrap}
+.tmo.first{border-left:0}
+.twk{font-size:12px;text-align:center;padding:2px 0 7px;color:var(--fg2);border-bottom:1px solid var(--line);
+  cursor:pointer;font-variant-numeric:tabular-nums}
+.twk span{display:inline-block;min-width:24px;height:22px;line-height:22px;border-radius:11px;padding:0 3px}
+.twk:hover span{background:var(--panel)}
+.twk.now span{background:var(--fg);color:var(--bg);font-weight:600}
+.tcl{display:flex;align-items:center;padding:0;min-height:48px}
+.tn.sep,.tcl.sep{border-top:1px solid var(--line)}
+.tcl.now{background:var(--today)}
+.tbar{flex:1;height:26px;margin:0 1px;display:flex;align-items:center;justify-content:center;font-size:11px;
+  font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;position:relative}
+.tbar.l{border-top-left-radius:13px;border-bottom-left-radius:13px;margin-left:3px}
+.tbar.r{border-top-right-radius:13px;border-bottom-right-radius:13px;margin-right:3px}
+.tbar:hover{filter:brightness(.96)}
+.tbar.x{opacity:.45;text-decoration:line-through}
+.tbar.mv::after{content:"";position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:3px;background:currentColor}
+.twk.off{color:var(--fg3)}
+.tskip{display:flex;align-items:center;justify-content:center;margin:4px 1px;border-radius:6px;overflow:hidden;
+  background:repeating-linear-gradient(135deg,var(--hatch) 0 1.5px,transparent 1.5px 7px)}
+.tskip span{writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;color:var(--fg2);background:var(--bg);
+  padding:6px 1px;border-radius:4px;white-space:nowrap}
+.tskip.wide span{writing-mode:horizontal-tb;transform:none;padding:2px 8px}
+.tsec{grid-column:1 / -1;background:var(--panel);border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--fg2);padding:5px 0}
+.tsec span{position:sticky;left:12px;padding-left:12px}
+.stg{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:0 3px;border-radius:3px;
+  border:1px solid currentColor;opacity:.75;line-height:13px;margin-right:4px;white-space:nowrap}
+.ev .r1 .stg{margin:0 auto 0 0}
+.ev .r1 span{margin-right:4px}
+@media (max-width:560px){.tl{--tn:128px}.tn{padding:8px}}
+.msg.err{font-size:13px;color:var(--danger)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="title">Расписание</h1>
+  <p class="sub" id="sub"></p>
+  <div class="bar" id="bar"></div>
+  <div id="nav"></div>
+  <div id="view"></div>
+  <div class="msg err" id="msg"></div>
+</div>
+<script src="schedule.js"></script>
+<script>
+var WDS=["пн","вт","ср","чт","пт","сб","вс"];
+var MG=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+var MN=["январь","февраль","март","апрель","май","июнь","июль","август","сентябрь","октябрь","ноябрь","декабрь"];
+var BOTH="both";
+
+var data={streams:[],overrides:[]},stream=null,group=null,view="week",week=null;
+
+function D(s){var p=String(s).split("-");return new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));}
+function iso(d){return d.toISOString().slice(0,10);}
+function addD(d,n){return new Date(d.getTime()+n*86400000);}
+function wdIdx(d){return (d.getUTCDay()+6)%7;}
+function monday(d){return addD(d,-wdIdx(d));}
+function fmt(d){return ("0"+d.getUTCDate()).slice(-2)+"."+("0"+(d.getUTCMonth()+1)).slice(-2);}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
+/* дата берётся по местному календарю: иначе ночью неделя съезжает на предыдущую */
+function today(){var n=new Date();return new Date(Date.UTC(n.getFullYear(),n.getMonth(),n.getDate()));}
+function curWeek(){return iso(monday(today()));}
+function mins(t){var p=String(t).split(":");return (+p[0])*60+(+p[1]||0);}
+function hm(m){return Math.floor(m/60)+":"+("0"+m%60).slice(-2);}
+function dur(o){return o.series.duration||data.duration||90;}
+function cap(t){t=String(t);return t.charAt(0).toUpperCase()+t.slice(1);}
+
+function isBoth(){return stream===BOTH;}
+function selStreams(){
+  var ss=data.streams||[];
+  if(isBoth())return ss;
+  for(var i=0;i<ss.length;i++)if(ss[i].id===stream)return [ss[i]];
+  return ss.slice(0,1);
+}
+function groupsOf(list){
+  var g=[],seen={};
+  list.forEach(function(st){(st.series||[]).forEach(function(s){
+    if(!seen[s.group]){seen[s.group]=1;g.push(s.group);}});});
+  return g;
+}
+/* неделя -> причина; в skips можно писать "ГГГГ-ММ-ДД" или {"date": ..., "reason": ...} */
+function skipSet(st){
+  var m={};
+  (st.skips||[]).forEach(function(k){
+    var dt=typeof k==="string"?k:k.date;
+    m[iso(monday(D(dt)))]=(typeof k==="string"?"":k.reason)||"нет занятий";
+  });
+  return m;
+}
+function ovMap(){var m={};(data.overrides||[]).forEach(function(o){m[o.series+"#"+o.idx]=o;});return m;}
+function colKey(s){return (s.time?wdIdx(D(s.start)):9)+"|"+(s.time||"");}
+
+function occurrences(s,st,sk){
+  var om=ovMap(),out=[],d=D(s.start),guard=0;
+  while(out.length<s.count&&guard++<400){
+    if(!sk[iso(monday(d))]){
+      var idx=out.length+1,o=om[s.id+"#"+idx];
+      var it={idx:idx,date:d,time:s.time||"",teacher:s.teacher||"",series:s,st:st,
+              tbd:!s.time,moved:false,cancel:false,note:""};
+      if(o){
+        if(o.date){it.date=D(o.date);it.moved=true;}
+        if(o.time){it.time=o.time;it.tbd=false;it.moved=true;}
+        if(o.teacher){it.teacher=o.teacher;}
+        if(o.cancel){it.cancel=true;}
+        it.note=o.note||"";
+      }
+      out.push(it);
+    }
+    d=addD(d,7);
+  }
+  return out;
+}
+
+function seriesOf(st){return (st.series||[]).filter(function(s){return s.group===group;});}
+
+function current(){
+  var out=[];
+  selStreams().forEach(function(st){
+    var sk=skipSet(st);
+    seriesOf(st).forEach(function(s){out=out.concat(occurrences(s,st,sk));});
+  });
+  return out;
+}
+
+function span(occ){
+  var mn=null,mx=null;
+  occ.forEach(function(o){var w=iso(monday(o.date));
+    if(!mn||w<mn)mn=w;if(!mx||w>mx)mx=w;});
+  return mn?{min:mn,max:mx}:null;
+}
+
+function weekTitle(d){
+  var e=addD(d,6);
+  if(d.getUTCMonth()===e.getUTCMonth())
+    return d.getUTCDate()+"–"+e.getUTCDate()+" "+MG[e.getUTCMonth()];
+  return d.getUTCDate()+" "+MG[d.getUTCMonth()]+" – "+e.getUTCDate()+" "+MG[e.getUTCMonth()];
+}
+
+function seg(items,cur,attr,right){
+  if(items.length<2&&!right)return "";
+  return '<div class="seg'+(right?" right":"")+'">'+items.map(function(it){
+    return '<button'+(it.v===cur?' class="on"':"")+" "+attr+'="'+esc(it.v)+'">'+esc(it.t)+"</button>";
+  }).join("")+"</div>";
+}
+
+function barHtml(gs){
+  var ss=(data.streams||[]).map(function(x){return {v:x.id,t:x.name||x.id};});
+  if(ss.length>1)ss.push({v:BOTH,t:"оба"});
+  return seg(ss,stream,"data-s")+
+         seg(gs.map(function(x){return {v:x,t:x};}),group,"data-g")+
+         seg([{v:"week",t:"неделя"},{v:"all",t:"все занятия"}],view,"data-v",1);
+}
+
+function navHtml(){
+  var sp=span(current()),cw=curWeek();
+  var lo=sp?sp.min:week,hi=sp?sp.max:week;
+  var p=iso(addD(D(week),-7)),nx=iso(addD(D(week),7));
+  var h='<div class="nav">';
+  h+='<button class="arw" data-w="'+p+'"'+(p<lo?" disabled":"")+' aria-label="предыдущая неделя">‹</button>';
+  h+='<button class="arw" data-w="'+nx+'"'+(nx>hi?" disabled":"")+' aria-label="следующая неделя">›</button>';
+  h+='<div class="wt">'+weekTitle(D(week))+"</div>";
+  if(week===cw)h+='<span class="cur">текущая неделя</span>';
+  else if(cw>=lo&&cw<=hi)h+='<button class="tdy" data-w="'+cw+'">сегодня</button>';
+  return h+"</div>";
+}
+
+/* диапазон часов считается по всему курсу, чтобы сетка не прыгала при листании недель */
+function hourSpan(occ){
+  var a=null,b=null;
+  occ.forEach(function(o){
+    if(o.tbd)return;
+    var st=mins(o.time),en=st+dur(o);
+    if(a===null||st<a)a=st;
+    if(b===null||en>b)b=en;
+  });
+  if(a===null){a=17*60;b=20*60;}
+  return {h0:Math.max(0,Math.floor((a-30)/60)),h1:Math.min(24,Math.ceil((b+30)/60))};
+}
+
+function noteOf(o){
+  if(o.cancel)return "отменено"+(o.note?" · "+esc(o.note):"");
+  if(o.moved)return "перенос"+(o.note?" · "+esc(o.note):"");
+  return esc(o.note);
+}
+function stTag(o){return isBoth()?'<b class="stg">'+esc(o.st.name||o.st.id)+"</b>":"";}
+
+function evHtml(o,top,pos){
+  var c=o.series.color||1,st=mins(o.time),en=st+dur(o);
+  var h='<div class="ev'+(o.cancel?" cancel":"")+'" title="'+esc(o.series.name)+", "+hm(st)+"–"+hm(en)+
+        (isBoth()?", "+esc(o.st.name):"")+'" style="top:'+top+"px;height:"+(dur(o)-2)+"px;"+pos+
+        "background:var(--c"+c+"b);color:var(--c"+c+'f)">';
+  h+='<div class="r1"><span>'+hm(st)+"</span>"+stTag(o)+"<i>"+o.idx+"/"+o.series.count+"</i></div>";
+  h+='<div class="nm">'+esc(o.series.name)+"</div>";
+  if(o.teacher)h+='<div class="tc">'+esc(o.teacher)+"</div>";
+  var nt=noteOf(o);
+  if(nt)h+='<div class="note">'+nt+"</div>";
+  return h+"</div>";
+}
+
+function chipHtml(o){
+  var c=o.series.color||1,nt=noteOf(o);
+  return '<span class="chip" style="background:var(--c'+c+"b);color:var(--c"+c+'f)">'+stTag(o)+"<b>"+
+         esc(o.series.name)+"</b>"+(o.teacher?" · "+esc(o.teacher):"")+
+         (nt?" · "+nt:"")+"<i>"+o.idx+"/"+o.series.count+"</i></span>";
+}
+
+function weekHtml(){
+  var PAD=8,all=current(),i;
+  var occ=all.filter(function(o){return iso(monday(o.date))===week;});
+  var skips=selStreams().filter(function(st){return seriesOf(st).length&&skipSet(st)[week];})
+    .map(function(st){var r=skipSet(st)[week];
+      return isBoth()?esc(st.name||st.id)+": "+esc(r):cap(esc(r))+", занятий нет";});
+  var r=hourSpan(all),H=(r.h1-r.h0)*60,tk=iso(today()),w0=D(week);
+  var now=new Date(),nowM=now.getHours()*60+now.getMinutes();
+  var h='<div class="cal"><div class="cgrid"><div class="crow chead"><div class="gut"></div>';
+  for(i=0;i<7;i++){
+    var dd=addD(w0,i);
+    h+='<div class="dhd'+(iso(dd)===tk?" td":"")+'"><span class="dw">'+WDS[i]+
+       '</span><span class="dn">'+dd.getUTCDate()+"</span></div>";
+  }
+  h+="</div>";
+  var tbd=occ.filter(function(o){return o.tbd;});
+  if(skips.length||tbd.length){
+    h+='<div class="crow allday"><div class="gut">'+(tbd.length?"без<br>времени":"")+'</div><div class="adc">';
+    skips.forEach(function(t){h+='<div class="skipb">'+t+"</div>";});
+    tbd.forEach(function(o){h+=chipHtml(o);});
+    h+="</div></div>";
+  }
+  h+='<div class="crow" style="height:'+(H+2*PAD)+'px"><div class="gut">';
+  for(var hr=r.h0;hr<r.h1;hr++)h+='<div class="hl" style="top:'+((hr-r.h0)*60+PAD)+'px">'+hr+":00</div>";
+  h+="</div>";
+  for(i=0;i<7;i++){
+    var d=addD(w0,i),isT=iso(d)===tk;
+    var list=occ.filter(function(o){return !o.tbd&&wdIdx(o.date)===i;})
+      .sort(function(a,b){return mins(a.time)-mins(b.time);});
+    /* начавшиеся почти одновременно делят ширину, более поздние ложатся поверх со сдвигом */
+    var cl=[];
+    list.forEach(function(o){
+      var st=mins(o.time),c=cl[cl.length-1];
+      if(c&&st-c.start<40){c.items.push(o);c.end=Math.max(c.end,st+dur(o));}
+      else cl.push({start:st,end:st+dur(o),items:[o]});
+    });
+    h+='<div class="dcol'+(isT?" td":"")+'">';
+    cl.forEach(function(c,ci){
+      var dp=0,n=c.items.length;
+      for(var k=0;k<ci;k++)if(cl[k].end>c.start)dp++;
+      c.items.forEach(function(o,ii){
+        var off=dp*18,base="(100% - "+off+"px)";
+        var pos="left:calc("+off+"px + "+base+" * "+(ii/n)+" + 2px);width:calc("+base+" * "+(1/n)+" - 4px);"+
+                (dp?"z-index:"+(dp+1)+";box-shadow:0 0 0 1.5px var(--bg);":"");
+        h+=evHtml(o,mins(o.time)-r.h0*60+PAD,pos);
+      });
+    });
+    if(isT&&nowM>=r.h0*60&&nowM<=r.h1*60)h+='<div class="nowl" style="top:'+(nowM-r.h0*60+PAD)+'px"></div>';
+    h+="</div>";
+  }
+  return h+"</div></div></div>";
+}
+
+function slotLabel(s){return s.time?WDS[wdIdx(D(s.start))]+" "+s.time:"время уточняется";}
+
+/* таймлайн: всем элементам задаётся строка грида явно, а в неделях-пропусках ячейки не выводятся —
+   их место занимает одна заштрихованная плашка на весь блок строк, поэтому узор не рвётся */
+function gridHtml(){
+  var cw=curWeek(),secs=[],allOcc=[];
+  selStreams().forEach(function(st){
+    var sk=skipSet(st);
+    var rows=seriesOf(st).map(function(s){return {s:s,occ:occurrences(s,st,sk)};})
+      .filter(function(r){return r.occ.length;});
+    if(!rows.length)return;
+    rows.sort(function(a,b){
+      var ka=a.s.time?wdIdx(D(a.s.start))*1440+mins(a.s.time):1e6,
+          kb=b.s.time?wdIdx(D(b.s.start))*1440+mins(b.s.time):1e6;
+      return ka-kb||(a.occ[0].date-b.occ[0].date);
+    });
+    var own=[];
+    rows.forEach(function(r){own=own.concat(r.occ);});
+    allOcc=allOcc.concat(own);
+    var ss=span(own),on={};
+    Object.keys(sk).forEach(function(w){if(w>=ss.min&&w<=ss.max)on[w]=sk[w];});
+    secs.push({st:st,sk:on,rows:rows});
+  });
+  if(!secs.length)return '<div class="empty">Занятий нет.</div>';
+  var sp=span(allOcc),weeks=[];
+  for(var d=D(sp.min);iso(d)<=sp.max;d=addD(d,7))weeks.push(iso(d));
+  var N=weeks.length,i=0,R=1;
+  var h='<div class="tl"><div class="tg" style="grid-template-columns:var(--tn) repeat('+N+',minmax(34px,1fr))">';
+  h+='<div class="tn hd" style="grid-row:1 / span 2;grid-column:1"></div>';
+  while(i<N){
+    var m=D(weeks[i]).getUTCMonth(),j=i;
+    while(j<N&&D(weeks[j]).getUTCMonth()===m)j++;
+    h+='<div class="tmo'+(i?"":" first")+'" style="grid-row:1;grid-column:'+(i+2)+" / span "+(j-i)+'">'+MN[m]+"</div>";
+    i=j;
+  }
+  weeks.forEach(function(w,wi){
+    var off=secs.every(function(x){return x.sk[w];});
+    h+='<div class="twk'+(w===cw?" now":"")+(off?" off":"")+'" style="grid-row:2;grid-column:'+(wi+2)+
+       '" data-go="'+w+'" title="неделя '+weekTitle(D(w))+'"><span>'+D(w).getUTCDate()+"</span></div>";
+  });
+  R=3;
+  secs.forEach(function(sec,si){
+    if(isBoth()){
+      h+='<div class="tsec" style="grid-row:'+R+'"><span>'+esc(sec.st.name||sec.st.id)+"</span></div>";
+      R++;
+    }
+    var r0=R,n=sec.rows.length;
+    for(i=0;i<N;){
+      if(!sec.sk[weeks[i]]){i++;continue;}
+      var j=i,why=sec.sk[weeks[i]];
+      while(j<N&&sec.sk[weeks[j]]===why)j++;
+      h+='<div class="tskip'+(j-i>2?" wide":"")+'" style="grid-row:'+r0+" / span "+n+";grid-column:"+(i+2)+
+         " / span "+(j-i)+'" title="'+esc(cap(why))+'"><span>'+esc(why)+"</span></div>";
+      i=j;
+    }
+    var last=null;
+    sec.rows.forEach(function(r,ri){
+      var s=r.s,c=s.color||1,k=colKey(s),sep=(ri>0&&k!==last)||(ri===0&&si>0&&!isBoth()),by={};
+      last=k;
+      r.occ.forEach(function(o){var w=iso(monday(o.date));(by[w]=by[w]||[]).push(o);});
+      h+='<div class="tn'+(sep?" sep":"")+'" style="grid-row:'+R+';grid-column:1"><div class="nm">'+esc(s.name)+
+         '</div><div class="mt">'+slotLabel(s)+(s.teacher?" · "+esc(s.teacher):"")+"</div></div>";
+      weeks.forEach(function(w,wi){
+        if(sec.sk[w])return;
+        var cls="tcl"+(sep?" sep":"")+(w===cw?" now":""),list=by[w],pos='style="grid-row:'+R+";grid-column:"+(wi+2)+'"';
+        if(!list){h+='<div class="'+cls+'" '+pos+"></div>";return;}
+        var o=list[0],pv=wi>0&&by[weeks[wi-1]],nx=wi<N-1&&by[weeks[wi+1]];
+        var nums=list.map(function(x){return x.idx;}).join(",");
+        var tip=esc(s.name)+(isBoth()?" ("+esc(sec.st.name)+")":"")+", занятие "+nums+" из "+s.count+
+                (o.tbd?"":", "+WDS[wdIdx(o.date)]+" "+fmt(o.date)+" "+esc(o.time))+
+                (o.cancel?", отменено":"")+(o.note?", "+esc(o.note):"");
+        h+='<div class="'+cls+'" '+pos+'><div class="tbar'+(pv?"":" l")+(nx?"":" r")+(o.cancel?" x":"")+
+           (o.moved?" mv":"")+'" data-go="'+w+'" title="'+tip+'" style="background:var(--c'+c+"b);color:var(--c"+c+'f)">'+
+           nums+"</div></div>";
+      });
+      R++;
+    });
+  });
+  return h+"</div></div>";
+}
+
+function render(){
+  var ss=data.streams||[],ids=ss.map(function(x){return x.id;});
+  if(ss.length>1)ids.push(BOTH);
+  if(ids.indexOf(stream)<0)stream=ids[0]||null;
+  var gs=groupsOf(selStreams());
+  if(gs.indexOf(group)<0)group=gs[0]||null;
+  var sp=span(current());
+  if(!week)week=curWeek();
+  if(sp){if(week<sp.min)week=sp.min;if(week>sp.max)week=sp.max;}
+  document.getElementById("bar").innerHTML=barHtml(gs);
+  document.getElementById("nav").innerHTML=view==="week"?navHtml():"";
+  document.getElementById("view").innerHTML=view==="week"?weekHtml():gridHtml();
+}
+
+function up(el,attr){
+  while(el&&el.getAttribute){
+    var v=el.getAttribute(attr);
+    if(v!==null)return v;
+    el=el.parentNode;
+  }
+  return null;
+}
+
+document.addEventListener("click",function(ev){
+  var s=up(ev.target,"data-s"),g=up(ev.target,"data-g"),
+      v=up(ev.target,"data-v"),w=up(ev.target,"data-w"),go=up(ev.target,"data-go");
+  if(s!==null)stream=s;
+  else if(g!==null)group=g;
+  else if(v!==null)view=v;
+  else if(w!==null)week=w;
+  else if(go!==null){week=go;view="week";}
+  else return;
+  render();
+});
+
+var j=(typeof SCHEDULE!=="undefined")?SCHEDULE:null;
+if(j&&!j.streams&&j.series)j.streams=[{id:"all",name:"Все",skips:j.skips||[],series:j.series}];
+if(j&&j.streams&&j.streams.length){
+  data=j;
+  document.getElementById("title").textContent=j.title||"Расписание";
+  document.getElementById("sub").textContent=j.subtitle||"";
+  render();
+}else{
+  document.getElementById("msg").textContent=
+    "Не удалось загрузить schedule.js: файл рядом с index.html или ошибка в его синтаксисе.";
+}
+</script>
+</body>
+</html>
