@@ -74,7 +74,6 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
   z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.18)}}
 .ev.open{left:2px!important;width:calc(100% - 4px)!important;height:auto;min-height:var(--h);
   z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.18)}
-.ev:hover .mt,.ev.open .mt{white-space:normal}
 .chg{margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .chh{font-size:12px;font-weight:600;color:var(--fg2);margin-bottom:6px}
 .chr{display:flex;gap:9px;align-items:flex-start;padding:5px 0;border-top:1px solid var(--line)}
@@ -87,10 +86,11 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
 .ev .r1{display:flex;justify-content:space-between;gap:4px;font-weight:600;font-variant-numeric:tabular-nums}
 .ev .r1 i{font-style:normal;font-weight:400;opacity:.65}
 .ev .nm{font-weight:600;font-size:12px;overflow-wrap:break-word;margin-top:1px}
-.ev .mt{opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev .mt{opacity:.8}
 .etag{font-weight:600}
 @container (max-width:86px){
   .ev .r1 i{display:none}
+  .ev .mt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ev .nm{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ev .note{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 }
@@ -410,7 +410,10 @@ function weekHtml(){
     var d=addD(w0,i),isT=iso(d)===tk;
     h+='<div class="dcol'+(isT?" td":"")+'">';
     days[i].forEach(function(o){
-      var pos="left:calc("+(o.col/o.n*100)+"% + 2px);width:calc("+(o.span/o.n*100)+"% - 4px);";
+      /* пересекающиеся лежат карточками: более позднее сверху со сдвигом вправо */
+      var off=Math.min(o.col,2)*30;
+      var pos="left:calc("+off+"% + 2px);width:calc("+(100-off)+"% - 4px);"+
+              (o.col?"z-index:"+(o.col+1)+";box-shadow:0 0 0 1.5px var(--bg),-3px 3px 8px rgba(0,0,0,.14);":"");
       h+=evHtml(o,o.s0-r.h0*60+PAD,pos);
     });
     if(isT&&nowM>=r.h0*60&&nowM<=r.h1*60)h+='<div class="nowl" style="top:'+(nowM-r.h0*60+PAD)+'px"></div>';
