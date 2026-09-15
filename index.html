@@ -352,6 +352,14 @@ function weekHtml(){
   return h+"</div></div></div>";
 }
 
+/* порядок предметов в таймлайне; предмет берётся из поля subject или угадывается по названию */
+var SUBJ=[["sferka",/сферк/i],["nebmeh",/небмех|небесн/i],["astro",/астро/i],["optics",/оптик/i],["practice",/практ|прак/i]];
+function subjRank(s){
+  for(var i=0;i<SUBJ.length;i++)
+    if(s.subject?s.subject===SUBJ[i][0]:SUBJ[i][1].test(s.name))return i;
+  return SUBJ.length;
+}
+
 function slotLabel(s){return s.time?WDS[wdIdx(D(s.start))]+" "+s.time:"время уточняется";}
 
 /* таймлайн: всем элементам задаётся строка грида явно, а в неделях-пропусках ячейки не выводятся —
@@ -365,9 +373,7 @@ function gridHtml(){
       .filter(function(r){return r.occ.length;});
     if(!rows.length)return;
     rows.sort(function(a,b){
-      var ka=a.s.time?wdIdx(D(a.s.start))*1440+mins(a.s.time):1e6,
-          kb=b.s.time?wdIdx(D(b.s.start))*1440+mins(b.s.time):1e6;
-      return ka-kb||(a.occ[0].date-b.occ[0].date);
+      return subjRank(a.s)-subjRank(b.s)||(a.occ[0].date-b.occ[0].date);
     });
     var own=[];
     rows.forEach(function(r){own=own.concat(r.occ);});
@@ -414,7 +420,7 @@ function gridHtml(){
     }
     var last=null;
     sec.rows.forEach(function(r,ri){
-      var s=r.s,c=s.color||1,k=colKey(s),sep=(ri>0&&k!==last)||(ri===0&&si>0&&!isBoth()&&!allG()),by={};
+      var s=r.s,c=s.color||1,k=subjRank(s),sep=(ri>0&&k!==last)||(ri===0&&si>0&&!isBoth()&&!allG()),by={};
       last=k;
       r.occ.forEach(function(o){var w=iso(monday(o.date));(by[w]=by[w]||[]).push(o);});
       h+='<div class="tn'+(sep?" sep":"")+'" style="grid-row:'+R+';grid-column:1"><div class="nm">'+esc(s.name)+
