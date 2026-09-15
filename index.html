@@ -29,7 +29,7 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
 
 .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 16px}
 .seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:2px}
-.seg button{border:0;background:transparent;color:var(--fg2);font-family:inherit;font-size:13px;
+.seg button{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;border:0;background:transparent;color:var(--fg2);font-family:inherit;font-size:13px;
   padding:5px 11px;border-radius:7px;cursor:pointer;white-space:nowrap}
 .seg button.on{background:var(--bg);color:var(--fg);font-weight:600;box-shadow:var(--sh)}
 .seg.right{margin-left:auto}
@@ -131,9 +131,8 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
 var WDS=["пн","вт","ср","чт","пт","сб","вс"];
 var MG=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
 var MN=["январь","февраль","март","апрель","май","июнь","июль","август","сентябрь","октябрь","ноябрь","декабрь"];
-var ALL="*";
 
-var data={streams:[],overrides:[]},stream=null,group=null,view="week",week=null;
+var data={streams:[],overrides:[]},selS=[],selG=[],view="week",week=null;
 
 function D(s){var p=String(s).split("-");return new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));}
 function iso(d){return d.toISOString().slice(0,10);}
@@ -151,14 +150,13 @@ function hm(m){return Math.floor(m/60)+":"+("0"+m%60).slice(-2);}
 function dur(o){return o.series.duration||data.duration||90;}
 function cap(t){t=String(t);return t.charAt(0).toUpperCase()+t.slice(1);}
 
-function isBoth(){return stream===ALL;}
-function allG(){return group===ALL;}
+function isBoth(){return selS.length>1;}
+function allG(){return selG.length>1;}
 function shortName(st){return st.short||String(st.name||st.id).charAt(0).toUpperCase();}
 function selStreams(){
   var ss=data.streams||[];
-  if(isBoth())return ss;
-  for(var i=0;i<ss.length;i++)if(ss[i].id===stream)return [ss[i]];
-  return ss.slice(0,1);
+  var out=ss.filter(function(x){return selS.indexOf(x.id)>=0;});
+  return out.length?out:ss.slice(0,1);
 }
 function groupsOf(list){
   var g=[],seen={};
@@ -200,8 +198,7 @@ function occurrences(s,st,sk){
 }
 
 function seriesOf(st,g){
-  g=g||group;
-  return (st.series||[]).filter(function(s){return g===ALL||s.group===g;});
+  return (st.series||[]).filter(function(s){return g?s.group===g:selG.indexOf(s.group)>=0;});
 }
 
 function current(){
@@ -227,21 +224,20 @@ function weekTitle(d){
   return d.getUTCDate()+" "+MG[d.getUTCMonth()]+" – "+e.getUTCDate()+" "+MG[e.getUTCMonth()];
 }
 
-function seg(items,cur,attr,right){
+function seg(items,cur,attr,right,tip){
   if(items.length<2&&!right)return "";
   return '<div class="seg'+(right?" right":"")+'">'+items.map(function(it){
-    return '<button'+(it.v===cur?' class="on"':"")+" "+attr+'="'+esc(it.v)+'">'+esc(it.t)+"</button>";
+    return '<button'+(cur.indexOf(it.v)>=0?' class="on"':"")+(tip?' title="'+tip+'"':"")+" "+attr+'="'+
+           esc(it.v)+'">'+esc(it.t)+"</button>";
   }).join("")+"</div>";
 }
 
 function barHtml(gs){
   var ss=(data.streams||[]).map(function(x){return {v:x.id,t:x.name||x.id};});
-  if(ss.length>1)ss.push({v:ALL,t:"все"});
-  var gg=gs.map(function(x){return {v:x,t:x};});
-  if(gg.length>1)gg.push({v:ALL,t:"все"});
-  return seg(ss,stream,"data-s")+
-         seg(gg,group,"data-g")+
-         seg([{v:"week",t:"неделя"},{v:"all",t:"все занятия"}],view,"data-v",1);
+  var gg=gs.map(function(x){return {v:x,t:x};}),tip="Ctrl/\u2318 + клик или долгое нажатие \u2014 выбрать несколько";
+  return seg(ss,selS,"data-s",0,tip)+
+         seg(gg,selG,"data-g",0,tip)+
+         seg([{v:"week",t:"неделя"},{v:"all",t:"все занятия"}],[view],"data-v",1);
 }
 
 function navHtml(){
@@ -364,7 +360,7 @@ function gridHtml(){
   var cw=curWeek(),secs=[],allOcc=[];
   selStreams().forEach(function(st){
    var sk=skipSet(st);
-   groupsOf([st]).filter(function(g){return allG()||g===group;}).forEach(function(g){
+   groupsOf([st]).filter(function(g){return selG.indexOf(g)>=0;}).forEach(function(g){
     var rows=seriesOf(st,g).map(function(s){return {s:s,occ:occurrences(s,st,sk)};})
       .filter(function(r){return r.occ.length;});
     if(!rows.length)return;
@@ -444,10 +440,11 @@ function gridHtml(){
 
 function render(){
   var ss=data.streams||[],ids=ss.map(function(x){return x.id;});
-  if(ss.length>1)ids.push(ALL);
-  if(ids.indexOf(stream)<0)stream=ids[0]||null;
+  selS=selS.filter(function(x){return ids.indexOf(x)>=0;});
+  if(!selS.length&&ids.length)selS=[ids[0]];
   var gs=groupsOf(selStreams());
-  if(gs.indexOf(group)<0&&!(group===ALL&&gs.length>1))group=gs[0]||null;
+  selG=selG.filter(function(x){return gs.indexOf(x)>=0;});
+  if(!selG.length&&gs.length)selG=[gs[0]];
   var sp=span(current());
   if(!week)week=curWeek();
   if(sp){if(week<sp.min)week=sp.min;if(week>sp.max)week=sp.max;}
@@ -465,11 +462,37 @@ function up(el,attr){
   return null;
 }
 
+/* обычный клик выбирает один вариант, с Ctrl/⌘/Shift или долгим нажатием — добавляет или убирает */
+function pick(sel,v,multi){
+  if(!multi)return [v];
+  var i=sel.indexOf(v);
+  if(i<0)return sel.concat([v]);
+  return sel.length>1?sel.slice(0,i).concat(sel.slice(i+1)):sel;
+}
+
+var lpTimer=null,lpDone=false;
+document.addEventListener("touchstart",function(ev){
+  var s=up(ev.target,"data-s"),g=up(ev.target,"data-g");
+  lpDone=false;
+  if(s===null&&g===null)return;
+  lpTimer=setTimeout(function(){
+    lpDone=true;
+    if(s!==null)selS=pick(selS,s,true);else selG=pick(selG,g,true);
+    if(navigator.vibrate)navigator.vibrate(15);
+    render();
+  },450);
+},{passive:true});
+["touchend","touchmove","touchcancel"].forEach(function(t){
+  document.addEventListener(t,function(){clearTimeout(lpTimer);},{passive:true});
+});
+
 document.addEventListener("click",function(ev){
+  if(lpDone){lpDone=false;return;}
+  var multi=ev.ctrlKey||ev.metaKey||ev.shiftKey;
   var s=up(ev.target,"data-s"),g=up(ev.target,"data-g"),
       v=up(ev.target,"data-v"),w=up(ev.target,"data-w"),go=up(ev.target,"data-go");
-  if(s!==null)stream=s;
-  else if(g!==null)group=g;
+  if(s!==null)selS=pick(selS,s,multi);
+  else if(g!==null)selG=pick(selG,g,multi);
   else if(v!==null)view=v;
   else if(w!==null)week=w;
   else if(go!==null){week=go;view="week";}
