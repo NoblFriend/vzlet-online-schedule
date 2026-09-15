@@ -77,7 +77,8 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
   background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(var(--half) 1px,transparent 1px);
   background-size:100% 60px,100% 30px;background-position:0 8px,0 8px;background-repeat:repeat-y}
 .dcol.td{background-color:var(--today)}
-.ev{position:absolute;border-radius:6px;padding:4px 6px;font-size:11px;line-height:1.25;overflow:hidden;
+.ev{position:absolute;display:flex;flex-direction:column;border-radius:6px;padding:4px 6px;font-size:11px;
+  line-height:1.25;overflow:hidden;
   container-type:inline-size;height:var(--h);cursor:default;
   transition:left .18s ease,width .18s ease,box-shadow .18s ease}
 /* наведение на компьютере — на ширину дня; тап на телефоне — до размера блока на компьютере
@@ -112,7 +113,9 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
 .ev.cancel .nm{text-decoration:line-through;opacity:.6}
 .ev.gh{background:var(--bg);background:color-mix(in srgb,currentColor 9%,var(--bg));border:1px dashed}
 .ev.gh .nm{text-decoration:line-through}
-.ev.gh .note{font-weight:600}
+/* информация о переносе прижата к низу карточки и отделена чертой */
+.ev .note{position:relative;margin-top:auto;padding-top:4px;font-weight:600;font-size:11px}
+.ev .note::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:currentColor;opacity:.3}
 .nowl{position:absolute;left:0;right:0;height:2px;background:#e5484d;z-index:2;pointer-events:none}
 .nowl::before{content:"";position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:4px;background:#e5484d}
 .empty{color:var(--fg2);font-size:14px;padding:16px 0}
