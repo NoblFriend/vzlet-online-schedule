@@ -110,6 +110,9 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
   .ev .note{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 }
 .ev.cancel .nm{text-decoration:line-through;opacity:.6}
+.ev.gh{background:transparent!important;border:1px dashed;opacity:.75;box-shadow:none!important}
+.ev.gh .nm{text-decoration:line-through}
+.ev.gh .note{font-weight:600}
 .nowl{position:absolute;left:0;right:0;height:2px;background:#e5484d;z-index:2;pointer-events:none}
 .nowl::before{content:"";position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:4px;background:#e5484d}
 .empty{color:var(--fg2);font-size:14px;padding:16px 0}
@@ -325,6 +328,14 @@ function tagOf(o){
 
 function evHtml(o,top,pos,rt){
   var c=o.series.color||1,st=mins(o.time),en=st+dur(o),tg=tagOf(o),nt=noteOf(o);
+  if(o.ghost){
+    var g=o.of,to=g.cancel?"отменено":"перенесено на "+WDS[wdIdx(g.date)]+" "+fmt(g.date)+(g.time?" "+esc(g.time):"");
+    return '<div class="ev gh'+(rt?" rt":"")+'" title="'+esc(o.series.name)+", "+hm(st)+"\u2013"+hm(en)+
+      ", "+to+'" style="top:'+top+"px;--h:"+(dur(o)-2)+"px;"+pos+"border-color:var(--c"+c+"f);color:var(--c"+c+
+      'f)"><div class="r1"><span>'+hm(st)+"\u2013"+hm(en)+"</span></div>"+
+      '<div class="nm">'+esc(o.series.name)+'</div><div class="note">'+to+
+      (g.note?" \u00b7 "+esc(g.note):"")+"</div></div>";
+  }
   var h='<div class="ev'+(o.cancel?" cancel":"")+(rt?" rt":"")+'" title="'+esc(o.series.name)+", "+hm(st)+"–"+hm(en)+
         (o.teacher?", "+esc(o.teacher):"")+(isBoth()||allG()?", "+esc(o.st.name)+" "+esc(o.series.group):"")+
         ", занятие "+o.idx+" из "+o.series.count+'" style="top:'+top+"px;--h:"+(dur(o)-2)+"px;"+pos+
@@ -400,7 +411,7 @@ function layoutDay(list){
 
 function weekHtml(){
   var PAD=8,all=current(),i;
-  var occ=all.filter(function(o){return iso(monday(o.date))===week;});
+  var occ=all.filter(function(o){return iso(monday(o.date))===week&&!o.cancel;});
   var active=selStreams().filter(function(st){return seriesOf(st).length;});
   var skipSt=active.filter(function(st){return skipSet(st)[week];});
   var allOff=skipSt.length>0&&skipSt.length===active.length&&!occ.length;
@@ -410,9 +421,17 @@ function weekHtml(){
   });
   var r=hourSpan(all,occ),H=(r.h1-r.h0)*60,tk=iso(today()),w0=D(week);
   var now=new Date(),nowM=now.getHours()*60+now.getMinutes();
+  /* перенесённые и отменённые оставляем на прежнем месте прозрачным пунктиром */
+  var ghosts=all.filter(function(o){
+    return (o.moved||o.cancel)&&o.origTime&&iso(monday(o.orig))===week;
+  }).map(function(o){
+    return {ghost:true,of:o,series:o.series,st:o.st,idx:o.idx,tbd:false,
+            date:o.orig,time:o.origTime,teacher:o.origTeacher,cancel:false,moved:false,note:""};
+  });
   var days=[];
   for(i=0;i<7;i++){
-    days[i]=occ.filter(function(o){return !o.tbd&&wdIdx(o.date)===i;});
+    days[i]=occ.filter(function(o){return !o.tbd&&wdIdx(o.date)===i;}).concat(
+      ghosts.filter(function(o){return wdIdx(o.date)===i;}));
     layoutDay(days[i]);
   }
   var h='<div class="cal"><div class="cgrid"><div class="crow chead"><div class="gut"></div>';
