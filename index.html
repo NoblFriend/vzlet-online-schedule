@@ -67,7 +67,22 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
   background-size:100% 60px,100% 30px;background-position:0 8px,0 8px;background-repeat:repeat-y}
 .dcol.td{background-color:var(--today)}
 .ev{position:absolute;border-radius:6px;padding:4px 6px;font-size:11px;line-height:1.25;overflow:hidden;
-  container-type:inline-size}
+  container-type:inline-size;height:var(--h);cursor:default;
+  transition:left .18s ease,width .18s ease,box-shadow .18s ease}
+@media (hover:hover){.ev:hover{left:2px!important;width:calc(100% - 4px)!important;height:auto;min-height:var(--h);
+  z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.18)}}
+.ev.open{left:2px!important;width:calc(100% - 4px)!important;height:auto;min-height:var(--h);
+  z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.ev:hover .mt,.ev.open .mt{white-space:normal}
+.chg{margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.chh{font-size:12px;font-weight:600;color:var(--fg2);margin-bottom:6px}
+.chr{display:flex;gap:9px;align-items:flex-start;padding:5px 0;border-top:1px solid var(--line)}
+.chh+.chr{border-top:0}
+.chr .dot{width:8px;height:8px;border-radius:4px;margin-top:6px;flex:none}
+.chn{font-weight:600;font-size:14px}
+.chi{font-weight:400;font-size:12px;color:var(--fg2)}
+.chw{font-size:13px;color:var(--fg2)}
+.chw b{color:var(--fg);font-weight:600}
 .ev .r1{display:flex;justify-content:space-between;gap:4px;font-weight:600;font-variant-numeric:tabular-nums}
 .ev .r1 i{font-style:normal;font-weight:400;opacity:.65}
 .ev .nm{font-weight:600;font-size:12px;overflow-wrap:break-word;margin-top:1px}
@@ -75,7 +90,8 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
 .etag{font-weight:600}
 @container (max-width:86px){
   .ev .r1 i{display:none}
-  .ev .nm{font-size:11px}
+  .ev .nm{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ev .note{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 }
 .ev.cancel .nm{text-decoration:line-through;opacity:.6}
 .nowl{position:absolute;left:0;right:0;height:2px;background:#e5484d;z-index:2;pointer-events:none}
@@ -184,11 +200,12 @@ function occurrences(s,st,sk){
     if(!sk[iso(monday(d))]){
       var idx=out.length+1,o=om[s.id+"#"+idx];
       var it={idx:idx,date:d,time:s.time||"",teacher:s.teacher||"",series:s,st:st,
-              tbd:!s.time,moved:false,cancel:false,note:""};
+              tbd:!s.time,moved:false,cancel:false,note:"",sub:false,
+              orig:d,origTime:s.time||"",origTeacher:s.teacher||""};
       if(o){
         if(o.date){it.date=D(o.date);it.moved=true;}
         if(o.time){it.time=o.time;it.tbd=false;it.moved=true;}
-        if(o.teacher){it.teacher=o.teacher;}
+        if(o.teacher&&o.teacher!==s.teacher){it.teacher=o.teacher;it.sub=true;}
         if(o.cancel){it.cancel=true;}
         it.note=o.note||"";
       }
@@ -286,13 +303,36 @@ function evHtml(o,top,pos){
   var c=o.series.color||1,st=mins(o.time),en=st+dur(o),tg=tagOf(o),nt=noteOf(o);
   var h='<div class="ev'+(o.cancel?" cancel":"")+'" title="'+esc(o.series.name)+", "+hm(st)+"–"+hm(en)+
         (o.teacher?", "+esc(o.teacher):"")+(isBoth()||allG()?", "+esc(o.st.name)+" "+esc(o.series.group):"")+
-        ", занятие "+o.idx+" из "+o.series.count+'" style="top:'+top+"px;height:"+(dur(o)-2)+"px;"+pos+
+        ", занятие "+o.idx+" из "+o.series.count+'" style="top:'+top+"px;--h:"+(dur(o)-2)+"px;"+pos+
         "background:var(--c"+c+"b);color:var(--c"+c+'f)">';
   h+='<div class="r1"><span>'+hm(st)+"</span><i>"+o.idx+"/"+o.series.count+"</i></div>";
   h+='<div class="nm">'+esc(o.series.name)+"</div>";
   var meta=[tg,o.teacher?esc(o.teacher):""].filter(Boolean).join(" · ");
   if(meta)h+='<div class="mt">'+meta+"</div>";
   if(nt)h+='<div class="note">'+nt+"</div>";
+  return h+"</div>";
+}
+
+function slotText(d,t){return WDS[wdIdx(d)]+" "+fmt(d)+(t?" "+esc(t):"");}
+
+/* переносы, отмены, замены и комментарии, касающиеся показанной недели (откуда или куда) */
+function changesHtml(all){
+  var list=all.filter(function(o){
+    return (o.moved||o.cancel||o.sub||o.note)&&
+      (iso(monday(o.orig))===week||iso(monday(o.date))===week);
+  }).sort(function(a,b){return a.date-b.date;});
+  if(!list.length)return "";
+  var h='<div class="chg"><div class="chh">Изменения на неделе</div>';
+  list.forEach(function(o){
+    var c=o.series.color||1,tg=tagOf(o),what=[];
+    if(o.cancel)what.push("<b>отменено</b> "+slotText(o.orig,o.origTime));
+    else if(o.moved)what.push("<b>перенос</b> "+slotText(o.orig,o.origTime)+" \u2192 "+slotText(o.date,o.time));
+    if(o.sub)what.push("<b>замена</b> "+esc(o.origTeacher||"\u2014")+" \u2192 "+esc(o.teacher));
+    if(o.note)what.push(esc(o.note));
+    h+='<div class="chr"><span class="dot" style="background:var(--c'+c+'f)"></span><div><div class="chn">'+
+       esc(o.series.name)+' <span class="chi">занятие '+o.idx+(tg?" \u00b7 "+tg:"")+"</span></div>"+
+       '<div class="chw">'+what.join(" \u00b7 ")+"</div></div></div>";
+  });
   return h+"</div>";
 }
 
@@ -342,15 +382,12 @@ function weekHtml(){
       return isBoth()?esc(st.name||st.id)+": "+esc(r):cap(esc(r))+", занятий нет";});
   var r=hourSpan(all),H=(r.h1-r.h0)*60,tk=iso(today()),w0=D(week);
   var now=new Date(),nowM=now.getHours()*60+now.getMinutes();
-  var days=[],w=[];
+  var days=[];
   for(i=0;i<7;i++){
     days[i]=occ.filter(function(o){return !o.tbd&&wdIdx(o.date)===i;});
-    var ln=layoutDay(days[i]);
-    w[i]=ln?ln:0.6;   /* день шире, если занятия идут параллельно; пустой — уже */
+    layoutDay(days[i]);
   }
-  var tot=w.reduce(function(a,b){return a+b;},0);
-  var h='<div class="cal"><div class="cgrid" style="--cols:54px '+w.map(function(x){return "minmax(0,"+x+"fr)";}).join(" ")+
-        ";min-width:"+Math.max(540,Math.round(54+tot*84))+'px"><div class="crow chead"><div class="gut"></div>';
+  var h='<div class="cal"><div class="cgrid"><div class="crow chead"><div class="gut"></div>';
   for(i=0;i<7;i++){
     var dd=addD(w0,i);
     h+='<div class="dhd'+(iso(dd)===tk?" td":"")+'"><span class="dw">'+WDS[i]+
@@ -377,7 +414,7 @@ function weekHtml(){
     if(isT&&nowM>=r.h0*60&&nowM<=r.h1*60)h+='<div class="nowl" style="top:'+(nowM-r.h0*60+PAD)+'px"></div>';
     h+="</div>";
   }
-  return h+"</div></div></div>";
+  return h+"</div></div></div>"+changesHtml(all);
 }
 
 /* порядок предметов в таймлайне; предмет берётся из поля subject или угадывается по названию */
@@ -522,6 +559,11 @@ document.addEventListener("touchstart",function(ev){
 
 document.addEventListener("click",function(ev){
   if(lpDone){lpDone=false;return;}
+  var el=ev.target,evb=null;
+  while(el&&el.classList){if(el.classList.contains("ev")){evb=el;break;}el=el.parentNode;}
+  var opened=document.querySelectorAll?document.querySelectorAll(".ev.open"):[];
+  for(var k=0;k<opened.length;k++)if(opened[k]!==evb)opened[k].classList.remove("open");
+  if(evb){evb.classList.toggle("open");return;}
   var multi=ev.ctrlKey||ev.metaKey||ev.shiftKey;
   var s=up(ev.target,"data-s"),g=up(ev.target,"data-g"),
       v=up(ev.target,"data-v"),w=up(ev.target,"data-w"),go=up(ev.target,"data-go");
