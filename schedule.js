@@ -62,10 +62,6 @@ var SCHEDULE =
       ]
     }
   ],
-  "overrides": [
-    {"series": "nebmeh-79", "idx": 1, "date": "2026-09-17", "time": "18:00", "note": "демо"},
-    {"series": "astro-79", "idx": 2, "cancel": true, "note": "демо"},
-    {"series": "reg-sferka1-79", "idx": 2, "date": "2026-09-19", "time": "12:00", "note": "демо"}
-  ]
+  "overrides": []
 }
 ;
