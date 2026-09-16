@@ -113,6 +113,15 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
 .ev.cancel .nm{text-decoration:line-through;opacity:.6}
 .ev.gh{background:var(--bg);background:color-mix(in srgb,currentColor 9%,var(--bg));border:1px dashed}
 .ev.gh .nm{text-decoration:line-through}
+/* подсветка занятия: ?highlight=курс#номер — бот так делает картинку недели */
+.ev.hl{outline:2.5px solid var(--fg);outline-offset:1px;z-index:6!important;
+  box-shadow:0 0 0 1.5px var(--bg),0 6px 16px rgba(0,0,0,.22)}
+/* ссылка на пост в канале: видна, когда карточка раскрыта */
+.ev .plink{display:none}
+.ev.open .plink{display:block;margin-top:3px;font-weight:600;text-decoration:underline;color:inherit}
+/* ?shot=1 — режим скриншота: в кадре только неделя */
+body.shot .bar,body.shot .hint,body.shot .arw,body.shot .tdy{display:none}
+body.shot .nav{margin-left:0}
 /* информация о переносе прижата к низу карточки и отделена чертой */
 .ev .note{position:relative;margin-top:auto;padding-top:4px;font-weight:600;font-size:11px}
 .ev .note::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:currentColor;opacity:.3}
@@ -169,8 +178,13 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
 <script>
 /* на сайте грузим данные с меткой времени, чтобы браузер не показывал старую копию из кэша;
    при открытии файла с диска — как есть */
-if(/^https?:/.test(location.protocol))document.write('<script src="schedule.js?v='+Date.now()+'"><\/script>');
-else document.write('<script src="schedule.js"><\/script>');
+if(/^https?:/.test(location.protocol)){
+  document.write('<script src="schedule.js?v='+Date.now()+'"><\/script>');
+  document.write('<script src="posts.js?v='+Date.now()+'"><\/script>');
+}else{
+  document.write('<script src="schedule.js"><\/script>');
+  document.write('<script src="posts.js"><\/script>');
+}
 </script>
 <script>
 var WDS=["пн","вт","ср","чт","пт","сб","вс"];
@@ -178,6 +192,22 @@ var MG=["января","февраля","марта","апреля","мая","и
 var MN=["январь","февраль","март","апрель","май","июнь","июль","август","сентябрь","октябрь","ноябрь","декабрь"];
 
 var data={streams:[],overrides:[]},selS=[],selG=[],view="week",week=null;
+
+/* параметры адресной строки: week — какую неделю открыть, highlight — какое занятие
+   обвести, stream/group — что выбрать, view — вид, shot — режим скриншота.
+   Ими пользуется бот, когда рендерит картинку недели тем же самым index.html. */
+function qparams(){
+  var m={},q=location.search.replace(/^\?/,"");
+  if(!q)return m;
+  q.split("&").forEach(function(p){
+    var i=p.indexOf("=");
+    if(i>0)m[decodeURIComponent(p.slice(0,i))]=decodeURIComponent(p.slice(i+1).replace(/\+/g," "));
+  });
+  return m;
+}
+var Q=qparams(),HL=Q.highlight||"";
+var POST=(typeof POSTS!=="undefined"&&POSTS)?POSTS:{};
+function lkey(o){return o.series.id+"#"+o.idx;}
 
 function D(s){var p=String(s).split("-");return new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));}
 function iso(d){return d.toISOString().slice(0,10);}
@@ -339,7 +369,8 @@ function evHtml(o,top,pos,rt){
       '<div class="nm">'+esc(o.series.name)+'</div><div class="note">'+to+
       (g.note?" \u00b7 "+esc(g.note):"")+"</div></div>";
   }
-  var h='<div class="ev'+(o.cancel?" cancel":"")+(rt?" rt":"")+'" title="'+esc(o.series.name)+", "+hm(st)+"–"+hm(en)+
+  var h='<div class="ev'+(o.cancel?" cancel":"")+(rt?" rt":"")+(HL===lkey(o)?" hl":"")+
+        '" title="'+esc(o.series.name)+", "+hm(st)+"–"+hm(en)+
         (o.teacher?", "+esc(o.teacher):"")+(isBoth()||allG()?", "+esc(o.st.name)+" "+esc(o.series.group):"")+
         ", занятие "+o.idx+" из "+o.series.count+'" style="top:'+top+"px;--h:"+(dur(o)-2)+"px;"+pos+
         "background:var(--c"+c+"b);color:var(--c"+c+'f)">';
@@ -348,6 +379,8 @@ function evHtml(o,top,pos,rt){
   if(tg)h+='<div class="mt">'+tg+"</div>";
   if(o.teacher)h+='<div class="mt">'+esc(o.teacher)+"</div>";
   if(nt)h+='<div class="note">'+nt+"</div>";
+  var pl=POST[lkey(o)];
+  if(pl)h+='<a class="plink" data-post="1" target="_blank" rel="noopener" href="'+esc(pl)+'">пост в канале</a>';
   return h+"</div>";
 }
 
@@ -616,6 +649,7 @@ document.addEventListener("touchstart",function(ev){
 
 document.addEventListener("click",function(ev){
   if(lpDone){lpDone=false;return;}
+  if(up(ev.target,"data-post")!==null)return;   /* ссылка на пост открывается как обычная */
   var el=ev.target,evb=null;
   while(el&&el.classList){if(el.classList.contains("ev")){evb=el;break;}el=el.parentNode;}
   var opened=document.querySelectorAll?document.querySelectorAll(".ev.open"):[];
@@ -639,6 +673,11 @@ if(j&&j.streams&&j.streams.length){
   data=j;
   document.getElementById("title").textContent=j.title||"Расписание";
   document.getElementById("sub").textContent=j.subtitle||"";
+  if(Q.stream)selS=Q.stream.split(",");
+  if(Q.group)selG=Q.group.split(",");
+  if(Q.view)view=Q.view;
+  if(Q.week)week=iso(monday(D(Q.week)));
+  if(Q.shot)document.body.className+=" shot";
   render();
 }else{
   document.getElementById("msg").textContent=
