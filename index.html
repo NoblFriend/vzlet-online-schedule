@@ -270,6 +270,16 @@ function occurrences(s,st,sk){
     }
     d=addD(d,7);
   }
+  /* idx — номер, присвоенный при создании, он не меняется и по нему ищутся правки.
+     pos — какое занятие по счёту фактически: после переноса «второе» может идти первым,
+     и на карточке честнее показывать порядок, а не исходный номер. Отменённые из
+     счёта выпадают и остаются при своём номере. */
+  var live=out.filter(function(o){return !o.cancel;}).slice().sort(function(a,b){
+    var ka=iso(a.date)+" "+(a.time||"99:99"),kb=iso(b.date)+" "+(b.time||"99:99");
+    return ka<kb?-1:ka>kb?1:a.idx-b.idx;
+  });
+  out.forEach(function(o){o.pos=o.idx;});
+  live.forEach(function(o,i){o.pos=i+1;});
   return out;
 }
 
@@ -372,9 +382,9 @@ function evHtml(o,top,pos,rt){
   var h='<div class="ev'+(o.cancel?" cancel":"")+(rt?" rt":"")+(HL===lkey(o)?" hl":"")+
         '" title="'+esc(o.series.name)+", "+hm(st)+"–"+hm(en)+
         (o.teacher?", "+esc(o.teacher):"")+(isBoth()||allG()?", "+esc(o.st.name)+" "+esc(o.series.group):"")+
-        ", занятие "+o.idx+" из "+o.series.count+'" style="top:'+top+"px;--h:"+(dur(o)-2)+"px;"+pos+
+        ", занятие "+o.pos+" из "+o.series.count+'" style="top:'+top+"px;--h:"+(dur(o)-2)+"px;"+pos+
         "background:var(--c"+c+"b);color:var(--c"+c+'f)">';
-  h+='<div class="r1"><span>'+hm(st)+"\u2013"+hm(en)+"</span><i>"+o.idx+"/"+o.series.count+"</i></div>";
+  h+='<div class="r1"><span>'+hm(st)+"\u2013"+hm(en)+"</span><i>"+o.pos+"/"+o.series.count+"</i></div>";
   h+='<div class="nm">'+esc(o.series.name)+"</div>";
   if(tg)h+='<div class="mt">'+tg+"</div>";
   if(o.teacher)h+='<div class="mt">'+esc(o.teacher)+"</div>";
@@ -401,7 +411,7 @@ function changesHtml(all){
     if(o.sub)what.push("<b>замена</b> "+esc(o.origTeacher||"\u2014")+" \u2192 "+esc(o.teacher));
     if(o.note)what.push(esc(o.note));
     h+='<div class="chr"><span class="dot" style="background:var(--c'+c+'f)"></span><div><div class="chn">'+
-       esc(o.series.name)+' <span class="chi">занятие '+o.idx+(tg?" \u00b7 "+tg:"")+"</span></div>"+
+       esc(o.series.name)+' <span class="chi">занятие '+o.pos+(tg?" \u00b7 "+tg:"")+"</span></div>"+
        '<div class="chw">'+what.join(" \u00b7 ")+"</div></div></div>";
   });
   return h+"</div>";
@@ -411,7 +421,7 @@ function chipHtml(o){
   var c=o.series.color||1,nt=noteOf(o),tg=tagOf(o);
   return '<span class="chip" style="background:var(--c'+c+"b);color:var(--c"+c+'f)">'+(tg?tg+" · ":"")+"<b>"+
          esc(o.series.name)+"</b>"+(o.teacher?" · "+esc(o.teacher):"")+
-         (nt?" · "+nt:"")+"<i>"+o.idx+"/"+o.series.count+"</i></span>";
+         (nt?" · "+nt:"")+"<i>"+o.pos+"/"+o.series.count+"</i></span>";
 }
 
 /* раскладка дня как в календарях: колонки только у реально пересекающихся занятий,
@@ -462,7 +472,7 @@ function weekHtml(){
   var ghosts=all.filter(function(o){
     return (o.moved||o.cancel)&&o.origTime&&iso(monday(o.orig))===week;
   }).map(function(o){
-    return {ghost:true,of:o,series:o.series,st:o.st,idx:o.idx,tbd:false,
+    return {ghost:true,of:o,series:o.series,st:o.st,idx:o.idx,pos:o.pos,tbd:false,
             date:o.orig,time:o.origTime,teacher:o.origTeacher,cancel:false,moved:false,note:""};
   });
   var days=[];

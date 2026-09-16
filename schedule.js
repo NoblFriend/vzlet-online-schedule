@@ -37,16 +37,6 @@ var SCHEDULE =
         {"id": "оптика-1-10-11", "group": "10-11", "name": "Оптика 1", "start": "2026-11-16", "count": 2, "color": 4},
         {"id": "оптика-2-10-11", "group": "10-11", "name": "Оптика 2", "start": "2026-12-14", "count": 1, "color": 4}
       ]
-    },
-    {
-      "id": "тест",
-      "name": "Тест",
-      "short": "Т",
-      "skips": [],
-      "series": [
-        {"id": "сферка-тест-10-11", "group": "10-11", "name": "Сферка тест", "subject": "sferka", "teacher": "Ребриков А.", "start": "2026-09-17", "time": "17:30", "duration": 90, "count": 5, "color": 2},
-        {"id": "небмех-тест-10-11", "group": "10-11", "name": "Небмех тест", "subject": "nebmeh", "teacher": "Муратов В.", "start": "2026-09-18", "time": "19:00", "duration": 90, "count": 5, "color": 3}
-      ]
     }
   ],
   "overrides": [
