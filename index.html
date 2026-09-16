@@ -296,10 +296,17 @@ function current(){
   return out;
 }
 
+/* границы расписания: недели с занятиями плюс недели-пропуски. Без пропусков
+   сборы перед самым первым занятием не показать — стрелки до них не долистают */
 function span(occ){
   var mn=null,mx=null;
-  occ.forEach(function(o){var w=iso(monday(o.date));
-    if(!mn||w<mn)mn=w;if(!mx||w>mx)mx=w;});
+  function add(w){if(!mn||w<mn)mn=w;if(!mx||w>mx)mx=w;}
+  occ.forEach(function(o){add(iso(monday(o.date)));});
+  selStreams().forEach(function(st){
+    if(!seriesOf(st).length)return;
+    var sk=skipSet(st);
+    for(var w in sk)if(sk.hasOwnProperty(w))add(w);
+  });
   return mn?{min:mn,max:mx}:null;
 }
 
