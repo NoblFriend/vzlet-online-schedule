@@ -9,15 +9,27 @@
   --bg:#ffffff;--fg:#1b1b1a;--fg2:#6b6b66;--fg3:#96968f;
   --line:#e4e4de;--line2:#c8c8c0;--panel:#f1f1ec;--danger:#8c2b2b;--skip:#eeeeea;
   --sh:0 1px 2px rgba(0,0,0,.10);--half:#f3f3ef;--hatch:#d9d9d2;--today:#fafaf6;
-  --c1b:#cfe0f7;--c1f:#123157;--c2b:#cfe8d6;--c2f:#123d1e;--c3b:#f6dada;--c3f:#5a1414;
-  --c4b:#e1d8f1;--c4f:#2f1a57;--c5b:#f6e2c7;--c5f:#573814;--c6b:#d7e8ea;--c6f:#123a3e;
+  /* цвета предметов: 1 астрофиз, 2 сферка, 3 небмех, 4 оптика, 5 прак, 6 запасной.
+     Фон — тон из таблицы курсов один в один; текст — тот же тон, затемнённый до
+     читаемости (контраст 7.5:1 и выше); --cNm — средний тон, им рисуется пунктир
+     призраков у перенесённых занятий */
+  --c1b:#f4cccc;--c1f:#551111;--c1m:#ea9999;
+  --c2b:#c9daf8;--c2f:#0b295b;--c2m:#a4c2f4;
+  --c3b:#d9d2e9;--c3f:#26174f;--c3m:#b4a7d6;
+  --c4b:#ead1dc;--c4f:#4f1732;--c4m:#d5a6bd;
+  --c5b:#d9ead3;--c5f:#284f17;--c5m:#b6d7a8;
+  --c6b:#d7e8ea;--c6f:#123a3e;--c6m:#9fc4c8;
 }
 @media (prefers-color-scheme: dark){:root{
   --bg:#1a1a18;--fg:#eceae6;--fg2:#a2a29a;--fg3:#78786f;
   --line:#32322e;--line2:#4a4a44;--panel:#232320;--danger:#e08b8b;--skip:#2a2a27;
   --sh:0 1px 2px rgba(0,0,0,.40);--half:#242421;--hatch:#3a3a35;--today:#1f1f1c;
-  --c1b:#1e3350;--c1f:#cfe0f7;--c2b:#1c3c26;--c2f:#cfe8d6;--c3b:#452020;--c3f:#f6dada;
-  --c4b:#302548;--c4f:#e1d8f1;--c5b:#45330f;--c5f:#f6e2c7;--c6b:#1b3a3d;--c6f:#d7e8ea;
+  --c1b:#411616;--c1f:#f4cccc;--c1m:#ea9999;
+  --c2b:#122545;--c2f:#c9daf8;--c2m:#a4c2f4;
+  --c3b:#262037;--c3f:#d9d2e9;--c3m:#b4a7d6;
+  --c4b:#37202b;--c4f:#ead1dc;--c4m:#d5a6bd;
+  --c5b:#26371f;--c5f:#d9ead3;--c5m:#b6d7a8;
+  --c6b:#1b3a3d;--c6f:#d7e8ea;--c6m:#5c8b8f;
 }}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);
@@ -381,7 +393,7 @@ function evHtml(o,top,pos,rt){
   if(o.ghost){
     var g=o.of,to=g.cancel?"отменено":"перенесено на "+WDS[wdIdx(g.date)]+" "+fmt(g.date)+(g.time?" "+esc(g.time):"");
     return '<div class="ev gh'+(rt?" rt":"")+'" title="'+esc(o.series.name)+", "+hm(st)+"\u2013"+hm(en)+
-      ", "+to+'" style="top:'+top+"px;--h:"+(dur(o)-2)+"px;"+pos+"border-color:var(--c"+c+"f);color:var(--c"+c+
+      ", "+to+'" style="top:'+top+"px;--h:"+(dur(o)-2)+"px;"+pos+"border-color:var(--c"+c+"m);color:var(--c"+c+
       'f)"><div class="r1"><span>'+hm(st)+"\u2013"+hm(en)+"</span></div>"+
       '<div class="nm">'+esc(o.series.name)+'</div><div class="note">'+to+
       (g.note?" \u00b7 "+esc(g.note):"")+"</div></div>";
