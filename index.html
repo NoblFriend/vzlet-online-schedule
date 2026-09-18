@@ -9,27 +9,27 @@
   --bg:#ffffff;--fg:#1b1b1a;--fg2:#6b6b66;--fg3:#96968f;
   --line:#e4e4de;--line2:#c8c8c0;--panel:#f1f1ec;--danger:#8c2b2b;--skip:#eeeeea;
   --sh:0 1px 2px rgba(0,0,0,.10);--half:#f3f3ef;--hatch:#d9d9d2;--today:#fafaf6;
-  /* цвета предметов: 1 астрофиз, 2 сферка, 3 небмех, 4 оптика, 5 прак, 6 запасной.
-     Фон — тон из таблицы курсов один в один; текст — тот же тон, затемнённый до
-     читаемости (контраст 7.5:1 и выше); --cNm — средний тон, им рисуется пунктир
-     призраков у перенесённых занятий */
-  --c1b:#f4cccc;--c1f:#551111;--c1m:#ea9999;
-  --c2b:#c9daf8;--c2f:#0b295b;--c2m:#a4c2f4;
-  --c3b:#d9d2e9;--c3f:#26174f;--c3m:#b4a7d6;
-  --c4b:#ead1dc;--c4f:#4f1732;--c4m:#d5a6bd;
-  --c5b:#d9ead3;--c5f:#284f17;--c5m:#b6d7a8;
-  --c6b:#d7e8ea;--c6f:#123a3e;--c6m:#9fc4c8;
+  /* цвета предметов: 1 астрофиз, 2 сферка, 3 небмех, 4 оптика, 5 прак, 6 без предмета.
+     Фон и акцент — пара тонов из таблицы курсов один в один, текст общий #1b1b1a:
+     так же устроены обложки постов, чтобы сайт и канал не расходились.
+     --cNm (акцент) — пунктир призраков у перенесённых занятий */
+  --c1b:#c9daf8;--c1f:#1b1b1a;--c1m:#a4c2f4;
+  --c2b:#d9ead3;--c2f:#1b1b1a;--c2m:#b6d7a8;
+  --c3b:#f4cccc;--c3f:#1b1b1a;--c3m:#ea9999;
+  --c4b:#d9d2e9;--c4f:#1b1b1a;--c4m:#b4a7d6;
+  --c5b:#ead1dc;--c5f:#1b1b1a;--c5m:#d5a6bd;
+  --c6b:#f1f1ec;--c6f:#1b1b1a;--c6m:#e4e4de;
 }
 @media (prefers-color-scheme: dark){:root{
   --bg:#1a1a18;--fg:#eceae6;--fg2:#a2a29a;--fg3:#78786f;
   --line:#32322e;--line2:#4a4a44;--panel:#232320;--danger:#e08b8b;--skip:#2a2a27;
   --sh:0 1px 2px rgba(0,0,0,.40);--half:#242421;--hatch:#3a3a35;--today:#1f1f1c;
-  --c1b:#411616;--c1f:#f4cccc;--c1m:#ea9999;
-  --c2b:#122545;--c2f:#c9daf8;--c2m:#a4c2f4;
-  --c3b:#262037;--c3f:#d9d2e9;--c3m:#b4a7d6;
-  --c4b:#37202b;--c4f:#ead1dc;--c4m:#d5a6bd;
-  --c5b:#26371f;--c5f:#d9ead3;--c5m:#b6d7a8;
-  --c6b:#1b3a3d;--c6f:#d7e8ea;--c6m:#5c8b8f;
+  --c1b:#12233f;--c1f:#c9daf8;--c1m:#a4c2f4;
+  --c2b:#25331e;--c2f:#d9ead3;--c2m:#b6d7a8;
+  --c3b:#3c1616;--c3f:#f4cccc;--c3m:#ea9999;
+  --c4b:#241e33;--c4f:#d9d2e9;--c4m:#b4a7d6;
+  --c5b:#331f29;--c5f:#ead1dc;--c5m:#d5a6bd;
+  --c6b:#2c2c26;--c6f:#f1f1ec;--c6m:#e4e4de;
 }}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);
