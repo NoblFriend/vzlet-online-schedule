@@ -125,8 +125,10 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
 .ev.cancel .nm{text-decoration:line-through;opacity:.6}
 .ev.gh{background:var(--bg);background:color-mix(in srgb,currentColor 9%,var(--bg));border:1px dashed}
 .ev.gh .nm{text-decoration:line-through}
-/* подсветка занятия: ?highlight=курс#номер — бот так делает картинку недели */
-.ev.hl{outline:2.5px solid var(--fg);outline-offset:1px;z-index:6!important;
+/* подсветка занятия: ?highlight=курс#номер — бот так делает картинку недели.
+   Имя не hl: этот класс уже занят подписями часов, и карточка унаследовала бы
+   от них transform:translateY(-50%) — уезжала вверх на полвысоты */
+.ev.hilite{outline:2.5px solid var(--fg);outline-offset:1px;z-index:6!important;
   box-shadow:0 0 0 1.5px var(--bg),0 6px 16px rgba(0,0,0,.22)}
 /* ссылка на пост в канале: видна, когда карточка раскрыта */
 .ev .plink{display:none}
@@ -398,7 +400,7 @@ function evHtml(o,top,pos,rt){
       '<div class="nm">'+esc(o.series.name)+'</div><div class="note">'+to+
       (g.note?" \u00b7 "+esc(g.note):"")+"</div></div>";
   }
-  var h='<div class="ev'+(o.cancel?" cancel":"")+(rt?" rt":"")+(HL===lkey(o)?" hl":"")+
+  var h='<div class="ev'+(o.cancel?" cancel":"")+(rt?" rt":"")+(HL===lkey(o)?" hilite":"")+
         '" title="'+esc(o.series.name)+", "+hm(st)+"–"+hm(en)+
         (o.teacher?", "+esc(o.teacher):"")+(isBoth()||allG()?", "+esc(o.st.name)+" "+esc(o.series.group):"")+
         ", занятие "+o.pos+" из "+o.series.count+'" style="top:'+top+"px;--h:"+(dur(o)-2)+"px;"+pos+
