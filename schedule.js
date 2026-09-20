@@ -26,7 +26,7 @@ var SCHEDULE =
         {"id": "астрофиз-ii-7-9", "group": "7-9", "name": "Астрофиз II", "start": "2026-11-23", "count": 3, "color": 1},
         {"id": "небмех-i-7-9", "group": "7-9", "name": "Небмех I", "teacher": "Бардин В.", "start": "2026-09-28", "time": "18:00", "count": 7, "color": 3},
         {"id": "небмех-ii-7-9", "group": "7-9", "name": "Небмех II", "teacher": "Бардин В.", "start": "2026-11-23", "time": "18:00", "count": 4, "color": 3},
-        {"id": "сферка-i-7-9", "group": "7-9", "name": "Сферка I", "teacher": "Зворыкин Е.", "start": "2026-09-08", "time": "18:00", "count": 6, "color": 2},
+        {"id": "сферка-i-7-9", "group": "7-9", "name": "Сферка I", "teacher": "Зворыкин И.", "start": "2026-09-08", "time": "18:00", "count": 6, "color": 2},
         {"id": "сферка-ii-7-9", "group": "7-9", "name": "Сферка II", "teacher": "Ахмадуллин Д.", "start": "2026-10-27", "time": "17:30", "count": 4, "color": 2},
         {"id": "оптика-i-7-9", "group": "7-9", "name": "Оптика I", "start": "2026-12-14", "count": 1, "color": 4},
         {"id": "сферка-i-10-11", "group": "10-11", "name": "Сферка I", "teacher": "Мигаль Т.", "start": "2026-09-11", "time": "17:30", "count": 6, "color": 2},
