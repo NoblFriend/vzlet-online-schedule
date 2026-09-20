@@ -45,6 +45,8 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
   padding:5px 11px;border-radius:7px;cursor:pointer;white-space:nowrap}
 .seg button.on{background:var(--bg);color:var(--fg);font-weight:600;box-shadow:var(--sh)}
 .seg.right{margin-left:auto}
+/* второй переключатель справа встаёт вплотную к первому, а не делит с ним пустоту */
+.seg.right+.seg.right{margin-left:8px}
 .hint{flex-basis:100%;font-size:11px;color:var(--fg3);margin-top:-2px}
 
 .nav{display:flex;align-items:center;gap:8px;margin:0 0 14px}
@@ -142,6 +144,22 @@ body.shot .nav{margin-left:0}
 .nowl{position:absolute;left:0;right:0;height:2px;background:#e5484d;z-index:2;pointer-events:none}
 .nowl::before{content:"";position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:4px;background:#e5484d}
 .empty{color:var(--fg2);font-size:14px;padding:16px 0}
+/* вкладка записей: те же курсы, но строчками и со ссылкой на пост в канале */
+.recs{display:flex;flex-direction:column}
+.rhd{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--fg2);padding:14px 0 6px}
+.rcourse{margin:0 0 14px}
+.rname{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;margin:0 0 5px}
+.rname::before{content:"";width:10px;height:10px;border-radius:3px;background:var(--rc)}
+.rrow{display:flex;align-items:baseline;gap:10px;padding:7px 10px;border-radius:7px;
+  border:1px solid var(--line);text-decoration:none;color:inherit;font-size:13px}
+.rrow+.rrow{margin-top:4px}
+@media (hover:hover){a.rrow:hover{background:var(--panel);border-color:var(--line2)}}
+.rrow.off{color:var(--fg3);border-style:dashed}
+.rnum{font-variant-numeric:tabular-nums;color:var(--fg2);min-width:1.6em}
+.rwhen{flex:1}
+.rgo{font-weight:600}
+.rrow.off .rgo{font-weight:400}
 
 .tl{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px;--tn:190px}
 .tg{display:grid;min-width:min-content}
@@ -205,7 +223,7 @@ var WDS=["пн","вт","ср","чт","пт","сб","вс"];
 var MG=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
 var MN=["январь","февраль","март","апрель","май","июнь","июль","август","сентябрь","октябрь","ноябрь","декабрь"];
 
-var data={streams:[],overrides:[]},selS=[],selG=[],view="week",week=null;
+var data={streams:[],overrides:[]},selS=[],selG=[],view="week",mode="schedule",week=null;
 
 /* параметры адресной строки: week — какую неделю открыть, highlight — какое занятие
    обвести, stream/group — что выбрать, view — вид, shot — режим скриншота.
@@ -344,7 +362,9 @@ function barHtml(gs){
   var gg=gs.map(function(x){return {v:x,t:x};}),tip="Ctrl/\u2318 + клик или долгое нажатие \u2014 выбрать несколько";
   return seg(ss,selS,"data-s",0,tip)+
          seg(gg,selG,"data-g",0,tip)+
-         seg([{v:"week",t:"неделя"},{v:"all",t:"все занятия"}],[view],"data-v",1)+
+         (mode==="schedule"
+            ? seg([{v:"week",t:"неделя"},{v:"all",t:"все занятия"}],[view],"data-v",1) : "")+
+         seg([{v:"schedule",t:"расписание"},{v:"recs",t:"записи"}],[mode],"data-m",1)+
          (ss.length>1||gg.length>1?'<div class="hint">Несколько сразу: Ctrl/\u2318 + клик или долгое нажатие</div>':"");
 }
 
@@ -630,6 +650,49 @@ function gridHtml(){
   return h+"</div></div>";
 }
 
+/* записи: прошедшие занятия строчками, клик ведёт на пост в канале.
+   У занятия без записи строка серая и без ссылки — видно, что её ещё не прислали,
+   а не что про неё забыли */
+function recsHtml(){
+  var tk=iso(today()),secs=[];
+  selStreams().forEach(function(st){
+    var sk=skipSet(st);
+    groupsOf([st]).filter(function(g){return selG.indexOf(g)>=0;}).forEach(function(g){
+      var rows=seriesOf(st,g).map(function(s){
+        return {s:s,occ:occurrences(s,st,sk).filter(function(o){
+          return !o.cancel&&iso(o.date)<tk;
+        })};
+      }).filter(function(r){return r.occ.length;});
+      if(!rows.length)return;
+      rows.sort(function(a,b){
+        return subjRank(a.s)-subjRank(b.s)||(a.occ[0].date-b.occ[0].date);
+      });
+      secs.push({st:st,g:g,rows:rows});
+    });
+  });
+  if(!secs.length)return '<div class="empty">Прошедших занятий пока нет.</div>';
+
+  var h='<div class="recs">';
+  secs.forEach(function(sec){
+    if(isBoth()||allG())
+      h+='<div class="rhd">'+esc(sec.st.name)+" \u00b7 "+esc(sec.g)+"</div>";
+    sec.rows.forEach(function(r){
+      h+='<div class="rcourse"><div class="rname" style="--rc:var(--c'+
+         (r.s.color||1)+'m)">'+esc(r.s.name)+"</div>";
+      r.occ.forEach(function(o){
+        var p=POST[lkey(o)],when=WDS[wdIdx(o.date)]+" "+fmt(o.date);
+        var inner='<span class="rnum">'+o.pos+'</span><span class="rwhen">'+when+"</span>";
+        h+=p&&p.rec
+          ? '<a class="rrow" href="'+esc(p.post)+'" target="_blank" rel="noopener">'+
+            inner+'<span class="rgo">запись</span></a>'
+          : '<div class="rrow off">'+inner+'<span class="rgo">ещё нет</span></div>';
+      });
+      h+="</div>";
+    });
+  });
+  return h+"</div>";
+}
+
 function render(){
   var ss=data.streams||[],ids=ss.map(function(x){return x.id;});
   selS=selS.filter(function(x){return ids.indexOf(x)>=0;});
@@ -641,8 +704,9 @@ function render(){
   if(!week)week=curWeek();
   if(sp){if(week<sp.min)week=sp.min;if(week>sp.max)week=sp.max;}
   document.getElementById("bar").innerHTML=barHtml(gs);
-  document.getElementById("nav").innerHTML=view==="week"?navHtml():"";
-  document.getElementById("view").innerHTML=view==="week"?weekHtml():gridHtml();
+  var recs=mode==="recs";
+  document.getElementById("nav").innerHTML=(!recs&&view==="week")?navHtml():"";
+  document.getElementById("view").innerHTML=recs?recsHtml():(view==="week"?weekHtml():gridHtml());
 }
 
 function up(el,attr){
@@ -688,9 +752,11 @@ document.addEventListener("click",function(ev){
   if(evb){evb.classList.toggle("open");return;}
   var multi=ev.ctrlKey||ev.metaKey||ev.shiftKey;
   var s=up(ev.target,"data-s"),g=up(ev.target,"data-g"),
-      v=up(ev.target,"data-v"),w=up(ev.target,"data-w"),go=up(ev.target,"data-go");
+      v=up(ev.target,"data-v"),w=up(ev.target,"data-w"),go=up(ev.target,"data-go"),
+      md=up(ev.target,"data-m");
   if(s!==null)selS=pick(selS,s,multi);
   else if(g!==null)selG=pick(selG,g,multi);
+  else if(md!==null)mode=md;
   else if(v!==null)view=v;
   else if(w!==null)week=w;
   else if(go!==null){week=go;view="week";}
@@ -707,6 +773,7 @@ if(j&&j.streams&&j.streams.length){
   if(Q.stream)selS=Q.stream.split(",");
   if(Q.group)selG=Q.group.split(",");
   if(Q.view)view=Q.view;
+  if(Q.mode)mode=Q.mode;
   if(Q.week)week=iso(monday(D(Q.week)));
   if(Q.shot)document.body.className+=" shot";
   render();
