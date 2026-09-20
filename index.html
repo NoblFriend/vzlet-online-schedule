@@ -208,15 +208,10 @@ body.shot .nav{margin-left:0}
   <div class="msg err" id="msg"></div>
 </div>
 <script>
-/* на сайте грузим данные с меткой времени, чтобы браузер не показывал старую копию из кэша;
-   при открытии файла с диска — как есть */
-if(/^https?:/.test(location.protocol)){
-  document.write('<script src="schedule.js?v='+Date.now()+'"><\/script>');
-  document.write('<script src="posts.js?v='+Date.now()+'"><\/script>');
-}else{
-  document.write('<script src="schedule.js"><\/script>');
-  document.write('<script src="posts.js"><\/script>');
-}
+/* данные грузим с меткой времени, иначе браузер показывает старую копию из кэша.
+   С диска это тоже нужно: файлы перегенерируются часто, а путь не меняется */
+document.write('<script src="schedule.js?v='+Date.now()+'"><\/script>');
+document.write('<script src="posts.js?v='+Date.now()+'"><\/script>');
 </script>
 <script>
 var WDS=["пн","вт","ср","чт","пт","сб","вс"];
