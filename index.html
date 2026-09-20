@@ -157,9 +157,12 @@ body.shot .nav{margin-left:0}
 @media (hover:hover){a.rrow:hover{background:var(--panel);border-color:var(--line2)}}
 .rrow.off{color:var(--fg3);border-style:dashed}
 .rnum{font-variant-numeric:tabular-nums;color:var(--fg2);min-width:1.6em}
-.rwhen{flex:1}
-.rgo{font-weight:600}
+.rwhen{font-variant-numeric:tabular-nums;white-space:nowrap}
+/* преподаватель занимает остаток строки и сжимается первым */
+.rwho{flex:1;min-width:0;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rgo{margin-left:auto;font-weight:600;white-space:nowrap}
 .rrow.off .rgo{font-weight:400}
+@media (max-width:420px){.rwho{display:none}}
 
 .tl{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px;--tn:190px}
 .tg{display:grid;min-width:min-content}
@@ -675,8 +678,10 @@ function recsHtml(){
       h+='<div class="rcourse"><div class="rname" style="--rc:var(--c'+
          (r.s.color||1)+'m)">'+esc(r.s.name)+"</div>";
       r.occ.forEach(function(o){
-        var p=POST[lkey(o)],when=WDS[wdIdx(o.date)]+" "+fmt(o.date);
-        var inner='<span class="rnum">'+o.pos+'</span><span class="rwhen">'+when+"</span>";
+        var p=POST[lkey(o)];
+        var when=WDS[wdIdx(o.date)]+" "+fmt(o.date)+(o.tbd?"":" "+esc(o.time));
+        var inner='<span class="rnum">'+o.pos+'</span><span class="rwhen">'+when+"</span>"+
+                  '<span class="rwho">'+esc(o.teacher||"")+"</span>";
         h+=p&&p.rec
           ? '<a class="rrow" href="'+esc(p.post)+'" target="_blank" rel="noopener">'+
             inner+'<span class="rgo">запись</span></a>'
