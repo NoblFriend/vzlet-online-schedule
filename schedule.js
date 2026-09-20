@@ -13,7 +13,7 @@ var SCHEDULE =
         {"id": "астрофиз-i-10-11", "group": "10-11", "name": "Астрофиз I", "teacher": "Акиньщиков А.", "start": "2026-09-14", "time": "19:00", "count": 5, "color": 1},
         {"id": "астрофиз-ii-10-11", "group": "10-11", "name": "Астрофиз II", "teacher": "Акиньщиков А.", "start": "2026-10-19", "time": "19:00", "count": 8, "color": 1},
         {"id": "сферка-base-10-11", "group": "10-11", "name": "Сферка Base", "teacher": "Мигаль Т.", "start": "2026-09-17", "time": "17:30", "count": 5, "color": 2},
-        {"id": "сферка-pro-10-11", "group": "10-11", "name": "Сферка Pro", "teacher": "Мигаль Т.", "start": "2026-11-05", "time": "17:30", "count": 5, "color": 2}
+        {"id": "сферка-pro-10-11", "group": "10-11", "name": "Сферка Pro", "teacher": "Мигаль Т.", "start": "2026-10-22", "time": "17:30", "count": 5, "color": 2}
       ]
     },
     {
