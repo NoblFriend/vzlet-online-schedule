@@ -222,6 +222,8 @@ var MG=["января","февраля","марта","апреля","мая","и
 var MN=["январь","февраль","март","апрель","май","июнь","июль","август","сентябрь","октябрь","ноябрь","декабрь"];
 
 var data={streams:[],overrides:[]},selS=[],selG=[],view="week",mode="schedule",week=null;
+/* выбор потоков и групп на вкладке расписания: на вкладке записей он свой, и его надо вернуть */
+var keepS=null,keepG=null;
 
 /* параметры адресной строки: week — какую неделю открыть, highlight — какое занятие
    обвести, stream/group — что выбрать, view — вид, shot — режим скриншота.
@@ -742,6 +744,19 @@ document.addEventListener("touchstart",function(ev){
   document.addEventListener(t,function(){clearTimeout(lpTimer);},{passive:true});
 });
 
+/* Записи ищут по всей школе, а не в выбранном потоке. Иначе вкладка почти всегда
+   пуста — у выбранного по умолчанию потока прошедших занятий с записью может не
+   быть вовсе, — и человек решает, что записей нет. Выбор расписания запоминаем
+   и возвращаем, когда он уходит обратно. */
+function setMode(m){
+  if(m==="recs"){
+    keepS=selS.slice();keepG=selG.slice();
+    selS=(data.streams||[]).map(function(x){return x.id;});
+    selG=groupsOf(selStreams()).slice();
+  }else if(keepS){selS=keepS;selG=keepG;keepS=keepG=null;}
+  mode=m;
+}
+
 document.addEventListener("click",function(ev){
   if(lpDone){lpDone=false;return;}
   if(up(ev.target,"data-post")!==null)return;   /* ссылка на пост открывается как обычная */
@@ -756,7 +771,7 @@ document.addEventListener("click",function(ev){
       md=up(ev.target,"data-m");
   if(s!==null)selS=pick(selS,s,multi);
   else if(g!==null)selG=pick(selG,g,multi);
-  else if(md!==null)mode=md;
+  else if(md!==null){if(md!==mode)setMode(md);}
   else if(v!==null)view=v;
   else if(w!==null)week=w;
   else if(go!==null){week=go;view="week";}
@@ -773,7 +788,10 @@ if(j&&j.streams&&j.streams.length){
   if(Q.stream)selS=Q.stream.split(",");
   if(Q.group)selG=Q.group.split(",");
   if(Q.view)view=Q.view;
-  if(Q.mode)mode=Q.mode;
+  /* прямая ссылка на записи открывается так же, как переключение вкладки:
+     по всей школе, если поток и группа не заданы явно */
+  if(Q.mode==="recs"&&!Q.stream&&!Q.group)setMode("recs");
+  else if(Q.mode)mode=Q.mode;
   if(Q.week)week=iso(monday(D(Q.week)));
   if(Q.shot)document.body.className+=" shot";
   render();
