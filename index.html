@@ -283,6 +283,18 @@ function skipSet(st){
 function ovMap(){var m={};(data.overrides||[]).forEach(function(o){m[o.series+"#"+o.idx]=o;});return m;}
 function colKey(s){return (s.time?wdIdx(D(s.start)):9)+"|"+(s.time||"");}
 
+/* Занятие уже прошло: вчерашнее и раньше — целиком, сегодняшнее — если кончилось.
+   Часы берутся у смотрящего, а расписание московское; для нас это одно и то же,
+   а ради других городов городить перевод зон незачем. Время не назначено —
+   сегодняшнее занятие прошедшим не считаем: неизвестно, кончилось ли оно. */
+function passed(o){
+  var day=iso(o.date),tk=iso(today());
+  if(day<tk)return true;
+  if(day>tk||o.tbd||!o.time)return false;
+  var n=new Date();
+  return n.getHours()*60+n.getMinutes()>=mins(o.time)+dur(o);
+}
+
 function occurrences(s,st,sk){
   var om=ovMap(),out=[],d=D(s.start),guard=0;
   while(out.length<s.count&&guard++<400){
@@ -654,13 +666,13 @@ function gridHtml(){
    У занятия без записи строка серая и без ссылки — видно, что её ещё не прислали,
    а не что про неё забыли */
 function recsHtml(){
-  var tk=iso(today()),secs=[];
+  var secs=[];
   selStreams().forEach(function(st){
     var sk=skipSet(st);
     groupsOf([st]).filter(function(g){return selG.indexOf(g)>=0;}).forEach(function(g){
       var rows=seriesOf(st,g).map(function(s){
         return {s:s,occ:occurrences(s,st,sk).filter(function(o){
-          return !o.cancel&&iso(o.date)<tk;
+          return !o.cancel&&passed(o);
         })};
       }).filter(function(r){return r.occ.length;});
       if(!rows.length)return;
