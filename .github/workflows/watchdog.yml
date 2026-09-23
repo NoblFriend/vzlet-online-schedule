@@ -2,9 +2,20 @@
 #
 # Бот не может сообщить о собственной смерти: если он лежит, он и молчит.
 # Поэтому сторож живёт здесь, снаружи: раз в полчаса смотрит, когда от бота
-# приходил последний сигнал, и заводит issue, если сигнал пропал. Про новый
-# issue GitHub пишет владельцу репозитория сам — отдельный сервис и отдельная
-# регистрация не нужны, секреты тоже: хватает встроенного токена.
+# приходил последний сигнал, и поднимает тревогу, если сигнал пропал.
+#
+# Тревога уходит в телеграм отдельному боту-сторожу — не тому, за которым
+# следим: если тот лежит, он и тревогу не отправит. Токен сторожа лежит в
+# секретах репозитория; он ничем не управляет и никуда не вхож, поэтому его
+# утечка стоит дёшево — в отличие от токена основного бота, который не
+# покидает сервера.
+#
+# Пока секрет не задан, тревога заводит issue: сторож не должен молчать из-за
+# того, что его ещё не донастроили.
+#
+# Тревога повторяется на каждой проверке, пока бот молчит. Это сделано
+# намеренно: запоминать, что уже сообщали, негде, а тревога и должна надоедать,
+# пока её не устранили. Когда бот оживёт, сообщения прекратятся сами.
 #
 # Расписание GitHub соблюдает нестрого, запуск может опоздать на четверть часа.
 # Поэтому порог сделан с запасом: тревога поднимается, только если сигнала нет
@@ -31,6 +42,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/github-script@v8
+        env:
+          ALERT_TOKEN: ${{ secrets.ALERT_BOT_TOKEN }}
+          ALERT_CHATS: ${{ secrets.ALERT_CHATS }}
         with:
           script: |
             // порог можно занизить при ручном запуске: непроверенная тревога — не тревога
@@ -52,6 +66,20 @@ jobs:
             const issues = await github.rest.issues.listForRepo({ owner, repo, state: "open" });
             const alarm = issues.data.find((i) => i.title === TITLE);
 
+            const tg = process.env.ALERT_TOKEN;
+            const chats = (process.env.ALERT_CHATS || "").split(",").map((x) => x.trim()).filter(Boolean);
+
+            async function toTelegram(text) {
+              for (const chat of chats) {
+                const r = await fetch(`https://api.telegram.org/bot${tg}/sendMessage`, {
+                  method: "POST",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({ chat_id: chat, text, parse_mode: "HTML" }),
+                });
+                core.info(`телеграм ${chat}: ${r.status}`);
+              }
+            }
+
             if (age > LIMIT_MIN) {
               const body = last
                 ? `Последний сигнал от бота — ${last.created_at}, это ${Math.round(age)} мин назад.\n\n` +
@@ -61,20 +89,19 @@ jobs:
                   "```\nsystemctl status vzlet-bot\njournalctl -u vzlet-bot -n 50\n```"
                 : "Сигналов от бота нет вовсе — похоже, он не запускался ни разу с тех пор, " +
                   "как сторож заведён.";
-              // Уже заведённый issue не трогаем: чинить его комментариями каждые
-              // полчаса значит превратить тревогу в шум.
-              if (!alarm) {
+              if (tg && chats.length) {
+                await toTelegram(`<b>${TITLE}</b>\n\n${body}`);
+                core.info("тревога отправлена в телеграм");
+              } else if (!alarm) {
+                // некому написать — оставляем след хотя бы здесь
                 await github.rest.issues.create({ owner, repo, title: TITLE, body });
+                core.warning("телеграм не настроен, тревога заведена issue");
               }
-              core.setFailed(body.split("\n")[0]);
             } else if (alarm) {
-              await github.rest.issues.createComment({
-                owner, repo, issue_number: alarm.number,
-                body: `Бот снова на связи: последний сигнал ${Math.round(age)} мин назад.`,
-              });
               await github.rest.issues.update({
                 owner, repo, issue_number: alarm.number, state: "closed",
               });
+              core.info("бот на связи, прежняя тревога закрыта");
             } else {
               core.info(`всё в порядке, последний сигнал ${Math.round(age)} мин назад`);
             }
