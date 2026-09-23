@@ -1,0 +1,73 @@
+# Сторож бота расписания.
+#
+# Бот не может сообщить о собственной смерти: если он лежит, он и молчит.
+# Поэтому сторож живёт здесь, снаружи: раз в полчаса смотрит, когда от бота
+# приходил последний сигнал, и заводит issue, если сигнал пропал. Про новый
+# issue GitHub пишет владельцу репозитория сам — отдельный сервис и отдельная
+# регистрация не нужны, секреты тоже: хватает встроенного токена.
+#
+# Расписание GitHub соблюдает нестрого, запуск может опоздать на четверть часа.
+# Поэтому порог сделан с запасом: тревога поднимается, только если сигнала нет
+# заметно дольше, чем длится обычная задержка.
+name: watchdog
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const LIMIT_MIN = 45;
+            const TITLE = "Бот расписания не подаёт признаков жизни";
+            const { owner, repo } = context.repo;
+
+            let last = null;
+            try {
+              const runs = await github.rest.actions.listWorkflowRuns({
+                owner, repo, workflow_id: "heartbeat.yml", per_page: 1,
+              });
+              last = runs.data.workflow_runs[0] || null;
+            } catch (e) {
+              core.info("обработчик сигнала ещё не заведён: " + e.message);
+            }
+
+            const age = last ? (Date.now() - new Date(last.created_at)) / 60000 : Infinity;
+            const issues = await github.rest.issues.listForRepo({ owner, repo, state: "open" });
+            const alarm = issues.data.find((i) => i.title === TITLE);
+
+            if (age > LIMIT_MIN) {
+              const body = last
+                ? `Последний сигнал от бота — ${last.created_at}, это ${Math.round(age)} мин назад.\n\n` +
+                  "Бот либо не работает, либо не достучится до телеграма: сигнал он шлёт только тогда, " +
+                  "когда телеграм ему ответил.\n\n" +
+                  "Что смотреть на сервере:\n" +
+                  "```\nsystemctl status vzlet-bot\njournalctl -u vzlet-bot -n 50\n```"
+                : "Сигналов от бота нет вовсе — похоже, он не запускался ни разу с тех пор, " +
+                  "как сторож заведён.";
+              // Уже заведённый issue не трогаем: чинить его комментариями каждые
+              // полчаса значит превратить тревогу в шум.
+              if (!alarm) {
+                await github.rest.issues.create({ owner, repo, title: TITLE, body });
+              }
+              core.setFailed(body.split("\n")[0]);
+            } else if (alarm) {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: alarm.number,
+                body: `Бот снова на связи: последний сигнал ${Math.round(age)} мин назад.`,
+              });
+              await github.rest.issues.update({
+                owner, repo, issue_number: alarm.number, state: "closed",
+              });
+            } else {
+              core.info(`всё в порядке, последний сигнал ${Math.round(age)} мин назад`);
+            }
