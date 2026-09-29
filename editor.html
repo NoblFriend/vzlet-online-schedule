@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Лента сезона</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+/* Палитра та же, что на сайте: курс должен узнаваться по цвету. */
+:root{
+  --bg:#ffffff;--fg:#1b1b1a;--fg2:#6b6b66;--fg3:#96968f;
+  --line:#e4e4de;--line2:#c8c8c0;--panel:#f1f1ec;--skip:#eeeeea;--accent:#2b6cb0;
+  --c1b:#c9daf8;--c1m:#a4c2f4;
+  --c2b:#d9ead3;--c2m:#b6d7a8;
+  --c3b:#f4cccc;--c3m:#ea9999;
+  --c4b:#d9d2e9;--c4m:#b4a7d6;
+  --c5b:#ead1dc;--c5m:#d5a6bd;
+  --c6b:#f1f1ec;--c6m:#e4e4de;
+  --col:30px;--lab:104px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#1a1a18;--fg:#eceae6;--fg2:#a2a29a;--fg3:#78786f;
+  --line:#32322e;--line2:#4a4a44;--panel:#232320;--skip:#2a2a27;--accent:#7aa7d9;
+  --c1b:#12233f;--c1m:#a4c2f4;
+  --c2b:#25331e;--c2m:#b6d7a8;
+  --c3b:#3c1616;--c3m:#ea9999;
+  --c4b:#241e33;--c4m:#b4a7d6;
+  --c5b:#331f29;--c5m:#d5a6bd;
+  --c6b:#2c2c26;--c6m:#e4e4de;
+}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 -apple-system,
+     "Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+h1{font-size:17px;margin:12px 16px 2px}
+.sub{color:var(--fg2);font-size:12px;margin:0 16px 10px}
+.scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
+        padding:0 0 8px;border-top:1px solid var(--line)}
+.grid{display:grid;align-items:center;min-width:max-content}
+.hd{position:sticky;top:0;z-index:3;background:var(--bg);font-size:10px;color:var(--fg3);
+    text-align:center;padding:5px 0;border-bottom:1px solid var(--line)}
+.hd.mon{color:var(--fg2);font-weight:600}
+.lab{position:sticky;left:0;z-index:2;background:var(--bg);padding:5px 8px;font-size:11px;
+     border-right:1px solid var(--line2);white-space:nowrap}
+.lab b{display:block;font-size:12px}
+.lab span{color:var(--fg2)}
+.grp{grid-column:1/-1;background:var(--panel);font-size:11px;font-weight:600;
+     padding:4px 8px;position:sticky;left:0}
+.slot{height:34px;border-bottom:1px solid var(--line);position:relative}
+.wk{border-right:1px solid var(--line)}
+.wk.skip{background:var(--skip)}
+.bar{position:absolute;top:4px;height:26px;border-radius:5px;display:flex;align-items:center;
+     padding:0 6px;font-size:11px;white-space:nowrap;overflow:hidden;cursor:grab;
+     border:1px solid var(--line2);touch-action:none}
+.bar.sel{outline:2px solid var(--accent);outline-offset:1px;z-index:2}
+.bar .grip{position:absolute;right:0;top:0;bottom:0;width:14px;cursor:ew-resize;
+           background:linear-gradient(90deg,transparent,rgba(0,0,0,.12))}
+.hole{position:absolute;top:4px;height:26px;border-radius:5px;border:1px dashed var(--line2);
+      opacity:.5}
+.panel{margin:10px 16px 90px;padding:12px;background:var(--panel);border-radius:10px}
+.panel.off{display:none}
+.row{display:flex;align-items:center;gap:8px;margin:0 0 8px}
+.row label{width:96px;color:var(--fg2);font-size:12px;flex:none}
+input{flex:1;min-width:0;background:var(--bg);color:var(--fg);border:1px solid var(--line2);
+      border-radius:6px;padding:7px 8px;font:inherit}
+.step{display:flex;align-items:center;gap:6px}
+.step button{width:32px;height:32px;font-size:16px}
+button{background:var(--bg);color:var(--fg);border:1px solid var(--line2);border-radius:6px;
+       padding:7px 10px;font:inherit;cursor:pointer}
+button.main{background:var(--accent);color:#fff;border-color:transparent}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.foot{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);
+      padding:10px 16px;display:flex;gap:8px;align-items:center}
+.foot .n{color:var(--fg2);font-size:12px;flex:1}
+.err{color:#8c2b2b;font-size:12px;margin:6px 16px}
+</style>
+</head>
+<body>
+<h1>Лента сезона</h1>
+<p class="sub" id="sub">загрузка…</p>
+<div class="scroll"><div class="grid" id="grid"></div></div>
+
+<div class="panel off" id="panel">
+  <div class="row"><label>курс</label><input id="f-name"></div>
+  <div class="row"><label>преподаватель</label><input id="f-teacher" list="teachers"></div>
+  <datalist id="teachers"></datalist>
+  <div class="row"><label>время</label><input id="f-time" placeholder="18:00" inputmode="numeric"></div>
+  <div class="row"><label>минут</label><input id="f-dur" placeholder="90" inputmode="numeric"></div>
+  <div class="row"><label>занятий</label>
+    <span class="step"><button data-n="-1">−</button><b id="f-count">0</b><button data-n="1">+</button></span>
+  </div>
+  <div class="row"><label>начало</label>
+    <span class="step"><button data-w="-1">◀</button><b id="f-start">—</b><button data-w="1">▶</button></span>
+  </div>
+  <div class="acts"><button id="close">Свернуть</button></div>
+</div>
+
+<div class="err" id="err"></div>
+
+<div class="foot">
+  <span class="n" id="n">правок нет</span>
+  <button id="reset">Сбросить</button>
+  <button class="main" id="send">Отправить</button>
+</div>
+
+<script src="schedule.js"></script>
+<script>
+"use strict";
+var tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+if (tg) { tg.ready(); tg.expand(); }
+
+/* ---- данные ------------------------------------------------------------- */
+
+function D(s){var p=String(s).split("-");return new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));}
+function iso(d){return d.toISOString().slice(0,10);}
+function addD(d,n){return new Date(d.getTime()+n*86400000);}
+function monday(d){var w=(d.getUTCDay()+6)%7;return addD(d,-w);}
+function fmt(d){return ("0"+d.getUTCDate()).slice(-2)+"."+("0"+(d.getUTCMonth()+1)).slice(-2);}
+var WD=["пн","вт","ср","чт","пт","сб","вс"];
+var MON=["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
+
+var data = typeof SCHEDULE !== "undefined" ? SCHEDULE : null;
+var courses = [], weeks = [], skips = {}, sel = null;
+
+function build(){
+  courses = [];
+  (data.streams||[]).forEach(function(st){
+    skips[st.id] = {};
+    (st.skips||[]).forEach(function(s){ skips[st.id][iso(monday(D(s.date)))] = s.reason || "пропуск"; });
+    (st.series||[]).forEach(function(s){
+      courses.push({
+        key:s.id, stream:st.id, streamName:st.name||st.id, group:s.group,
+        name:s.name, teacher:s.teacher||"", time:s.time||"", dur:s.duration||"",
+        count:s.count, start:s.start, color:s.color||6,
+        was:{name:s.name, teacher:s.teacher||"", time:s.time||"", dur:s.duration||"",
+             count:s.count, start:s.start}
+      });
+    });
+  });
+
+  /* Недели сезона: от самого раннего начала до самого позднего конца, с запасом
+     в месяц вперёд — курс должно быть куда продлить. */
+  var lo=null, hi=null;
+  courses.forEach(function(c){
+    var m=monday(D(c.start));
+    if(!lo||m<lo)lo=m;
+    var end=weeksOf(c); end=end.length?end[end.length-1]:m;
+    if(!hi||end>hi)hi=end;
+  });
+  if(!lo){lo=monday(new Date());hi=lo;}
+  hi=addD(hi,28);
+  weeks=[];
+  for(var w=new Date(lo); w<=hi; w=addD(w,7)) weeks.push(new Date(w));
+}
+
+/* Недели, которые курс занимает: шаг в неделю, пропущенные недели потока
+   перескакиваем. То же правило у бота (lessons.planned_dates) и на сайте
+   (occurrences) — здесь оно выражено через колонки. */
+function weeksOf(c){
+  var out=[], w=monday(D(c.start)), guard=0;
+  while(out.length<c.count && guard++<200){
+    if(!skips[c.stream][iso(w)]) out.push(new Date(w));
+    w=addD(w,7);
+  }
+  return out;
+}
+
+function slotsOf(){
+  var keys=[], byKey={};
+  courses.forEach(function(c){
+    var wd=(D(c.start).getUTCDay()+6)%7;
+    var k=c.stream+"|"+c.group+"|"+wd;
+    if(!byKey[k]){byKey[k]={stream:c.stream,streamName:c.streamName,group:c.group,wd:wd,list:[]};
+                  keys.push(k);}
+    byKey[k].list.push(c);
+  });
+  keys.sort(function(a,b){
+    var x=byKey[a],y=byKey[b];
+    return x.streamName.localeCompare(y.streamName)||x.group.localeCompare(y.group)||x.wd-y.wd;
+  });
+  return keys.map(function(k){return byKey[k];});
+}
+
+/* ---- отрисовка ---------------------------------------------------------- */
+
+function render(){
+  var grid=document.getElementById("grid");
+  grid.style.gridTemplateColumns="var(--lab) repeat("+weeks.length+",var(--col))";
+  grid.innerHTML="";
+
+  grid.appendChild(cell("hd lab","неделя"));
+  weeks.forEach(function(w,i){
+    var first = i===0 || w.getUTCMonth()!==weeks[i-1].getUTCMonth();
+    grid.appendChild(cell("hd"+(first?" mon":""), first?MON[w.getUTCMonth()]:fmt(w).slice(0,2)));
+  });
+
+  var lastStream=null;
+  slotsOf().forEach(function(slot){
+    if(slot.streamName!==lastStream){
+      lastStream=slot.streamName;
+      grid.appendChild(cell("grp",slot.streamName));
+    }
+    var lab=cell("lab","");
+    lab.innerHTML="<b>"+esc(slot.group)+"</b><span>"+WD[slot.wd]+"</span>";
+    grid.appendChild(lab);
+
+    var track=document.createElement("div");
+    track.className="slot";
+    track.style.gridColumn="2 / -1";
+    weeks.forEach(function(w){
+      var c=document.createElement("div");
+      c.className="wk"+(skips[slot.stream][iso(w)]?" skip":"");
+      c.style.cssText+="position:absolute;top:0;bottom:0;left:"+(idx(w)*30)+"px;width:30px";
+      track.appendChild(c);
+    });
+    slot.list.forEach(function(c){ bars(track,c); });
+    grid.appendChild(track);
+  });
+
+  document.getElementById("sub").textContent =
+    data.subtitle ? data.subtitle : (courses.length+" курсов");
+  fillTeachers();
+  countChanges();
+}
+
+function idx(w){var t=iso(w);for(var i=0;i<weeks.length;i++)if(iso(weeks[i])===t)return i;return -1;}
+function cell(cls,text){var d=document.createElement("div");d.className=cls;d.textContent=text;return d;}
+function esc(s){return String(s).replace(/[&<>]/g,function(m){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;"}[m];});}
+
+/* Курс рисуется не одним блоком, а полосами по занятым неделям: пропущенная
+   неделя видна дырой, и это честнее, чем сплошная полоса поверх неё. */
+function bars(track,c){
+  var occ=weeksOf(c).map(idx).filter(function(i){return i>=0;});
+  if(!occ.length)return;
+  var runs=[],cur=[occ[0]];
+  for(var i=1;i<occ.length;i++){
+    if(occ[i]===occ[i-1]+1)cur.push(occ[i]);else{runs.push(cur);cur=[occ[i]];}
+  }
+  runs.push(cur);
+  runs.forEach(function(run,n){
+    var b=document.createElement("div");
+    b.className="bar"+(sel===c.key?" sel":"");
+    b.style.left=(run[0]*30+1)+"px";
+    b.style.width=(run.length*30-3)+"px";
+    b.style.background="var(--c"+c.color+"b)";
+    b.style.borderColor="var(--c"+c.color+"m)";
+    b.textContent=n===0?c.name:"";
+    b.dataset.key=c.key;
+    if(n===runs.length-1){
+      var g=document.createElement("div");g.className="grip";g.dataset.grip="1";
+      b.appendChild(g);
+    }
+    track.appendChild(b);
+  });
+}
+
+/* ---- правки ------------------------------------------------------------- */
+
+function find(key){for(var i=0;i<courses.length;i++)if(courses[i].key===key)return courses[i];}
+
+function diffOf(c){
+  var out={};
+  ["name","teacher","time","count","start"].forEach(function(f){
+    if(String(c[f])!==String(c.was[f]))out[f]=c[f];
+  });
+  if(String(c.dur)!==String(c.was.dur))out.duration=c.dur;
+  return out;
+}
+
+function countChanges(){
+  var n=0;
+  courses.forEach(function(c){ if(Object.keys(diffOf(c)).length)n++; });
+  document.getElementById("n").textContent =
+    n ? ("изменено курсов: "+n) : "правок нет";
+  return n;
+}
+
+function shift(c,dw){
+  var w=addD(monday(D(c.start)),dw*7);
+  if(idx(w)<0)return;
+  c.start=iso(addD(w,(D(c.start).getUTCDay()+6)%7));
+  after();
+}
+
+function resize(c,dn){
+  var n=c.count+dn;
+  if(n<1||n>60)return;
+  c.count=n;
+  after();
+}
+
+function after(){ build2(); render(); panel(); }
+
+/* Пересобираем только границы недель: курсы уже в памяти, заново их читать
+   из schedule.js нельзя — потеряются правки. */
+function build2(){
+  var lo=null,hi=null;
+  courses.forEach(function(c){
+    var m=monday(D(c.start)); if(!lo||m<lo)lo=m;
+    var o=weeksOf(c); var e=o.length?o[o.length-1]:m; if(!hi||e>hi)hi=e;
+  });
+  hi=addD(hi,28);
+  weeks=[];
+  for(var w=new Date(lo);w<=hi;w=addD(w,7))weeks.push(new Date(w));
+}
+
+/* ---- панель ------------------------------------------------------------- */
+
+function panel(){
+  var box=document.getElementById("panel"),c=sel&&find(sel);
+  if(!c){box.className="panel off";return;}
+  box.className="panel";
+  document.getElementById("f-name").value=c.name;
+  document.getElementById("f-teacher").value=c.teacher;
+  document.getElementById("f-time").value=c.time;
+  document.getElementById("f-dur").value=c.dur;
+  document.getElementById("f-count").textContent=c.count;
+  document.getElementById("f-start").textContent=fmt(D(c.start))+" "+WD[(D(c.start).getUTCDay()+6)%7];
+}
+
+function fillTeachers(){
+  var seen={},out=[];
+  courses.forEach(function(c){if(c.teacher&&!seen[c.teacher]){seen[c.teacher]=1;out.push(c.teacher);}});
+  document.getElementById("teachers").innerHTML =
+    out.sort().map(function(t){return '<option value="'+esc(t)+'">';}).join("");
+}
+
+["f-name","f-teacher","f-time","f-dur"].forEach(function(id){
+  document.getElementById(id).addEventListener("input",function(){
+    var c=sel&&find(sel); if(!c)return;
+    if(id==="f-name")c.name=this.value;
+    if(id==="f-teacher")c.teacher=this.value;
+    if(id==="f-time")c.time=this.value;
+    if(id==="f-dur")c.dur=this.value;
+    countChanges();
+  });
+});
+
+document.getElementById("panel").addEventListener("click",function(ev){
+  var c=sel&&find(sel); if(!c)return;
+  var n=ev.target.getAttribute("data-n"), w=ev.target.getAttribute("data-w");
+  if(n)resize(c,+n);
+  if(w)shift(c,+w);
+});
+document.getElementById("close").addEventListener("click",function(){sel=null;render();panel();});
+
+/* ---- перетаскивание ----------------------------------------------------- */
+
+var drag=null;
+document.getElementById("grid").addEventListener("pointerdown",function(ev){
+  var bar=ev.target.closest ? ev.target.closest(".bar") : null;
+  if(!bar)return;
+  var c=find(bar.dataset.key); if(!c)return;
+  sel=c.key; render(); panel();
+  drag={c:c, x0:ev.clientX, grip:!!ev.target.getAttribute("data-grip"),
+        start0:c.start, count0:c.count};
+  ev.preventDefault();
+});
+window.addEventListener("pointermove",function(ev){
+  if(!drag)return;
+  var dw=Math.round((ev.clientX-drag.x0)/30);
+  if(drag.grip){
+    var n=Math.max(1,Math.min(60,drag.count0+dw));
+    if(n!==drag.c.count){drag.c.count=n;after();}
+  }else if(dw!==0){
+    var w=addD(monday(D(drag.start0)),dw*7);
+    if(idx(w)>=0){
+      var want=iso(addD(w,(D(drag.start0).getUTCDay()+6)%7));
+      if(want!==drag.c.start){drag.c.start=want;after();}
+    }
+  }
+});
+window.addEventListener("pointerup",function(){drag=null;});
+
+/* ---- отправка ----------------------------------------------------------- */
+
+function payload(){
+  var edit=[];
+  courses.forEach(function(c){
+    var d=diffOf(c);
+    if(Object.keys(d).length){d.id=c.key;edit.push(d);}
+  });
+  return {v:1, edit:edit, add:[]};
+}
+
+document.getElementById("send").addEventListener("click",function(){
+  var err=document.getElementById("err");
+  if(!countChanges()){err.textContent="Нечего отправлять: правок нет.";return;}
+  var body=JSON.stringify(payload());
+  if(body.length>4000){err.textContent="Слишком много правок за раз, отправьте частями.";return;}
+  err.textContent="";
+  if(tg){tg.sendData(body);}
+  else{alert(body);}   /* в обычном браузере просто показываем, что ушло бы */
+});
+
+document.getElementById("reset").addEventListener("click",function(){
+  courses.forEach(function(c){
+    c.name=c.was.name;c.teacher=c.was.teacher;c.time=c.was.time;
+    c.dur=c.was.dur;c.count=c.was.count;c.start=c.was.start;
+  });
+  sel=null;build2();render();panel();
+  document.getElementById("err").textContent="";
+});
+
+/* ---- старт -------------------------------------------------------------- */
+
+if(data && data.streams && data.streams.length){
+  build();render();
+}else{
+  document.getElementById("sub").textContent="Не удалось прочитать schedule.js.";
+}
+</script>
+</body>
+</html>
