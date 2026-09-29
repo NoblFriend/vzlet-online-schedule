@@ -463,8 +463,11 @@ function evHtml(o,top,pos,rt){
   if(tg)h+='<div class="mt">'+tg+"</div>";
   if(o.teacher)h+='<div class="mt">'+esc(o.teacher)+"</div>";
   if(nt)h+='<div class="note">'+nt+"</div>";
+  /* в posts.js у занятия объект {post, rec}, а не строка: раньше сюда
+     подставлялся он целиком, и ссылка вела на «[object Object]» — то есть в 404 */
   var pl=POST[lkey(o)];
-  if(pl)h+='<a class="plink" data-post="1" target="_blank" rel="noopener" href="'+esc(pl)+'">пост в канале</a>';
+  if(pl&&pl.post)h+='<a class="plink" data-post="1" target="_blank" rel="noopener" href="'+
+    esc(pl.post)+'">пост в канале</a>';
   return h+"</div>";
 }
 

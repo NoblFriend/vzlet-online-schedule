@@ -137,8 +137,10 @@ button.main{background:var(--fg);color:var(--bg);border-color:transparent;font-w
   <div class="phd"><b id="p-title">курс</b><span id="p-where"></span>
     <button id="close">Свернуть</button></div>
   <div class="row slotonly"><label>поток</label><span class="seg" id="f-stream"></span></div>
-  <div class="row slotonly"><label>группа</label><input id="f-group" placeholder="10-11"></div>
+  <div class="row slotonly"><label>группа</label><span class="seg" id="f-groups"></span>
+    <input id="f-group" class="off" placeholder="5-6"></div>
   <div class="row slotonly"><label>день</label><span class="seg" id="f-wd"></span></div>
+  <div class="row pauseonly"><label>поток</label><span class="seg" id="f-pstream"></span></div>
   <div class="row pauseonly"><label>причина</label><input id="f-why" placeholder="очные сборы"></div>
   <div class="row pauseonly"><label>недель</label>
     <span class="step"><button data-pn="-1">−</button><b id="f-plen">1</b><button data-pn="1">+</button></span>
@@ -146,9 +148,11 @@ button.main{background:var(--fg);color:var(--bg);border-color:transparent;font-w
   <div class="row pauseonly"><label>с недели</label>
     <span class="step"><button data-pw="-1">◀</button><b id="f-pstart">—</b><button data-pw="1">▶</button></span>
   </div>
-  <div class="row courseonly"><label>курс</label><input id="f-name"></div>
-  <div class="row courseonly"><label>преподаватель</label><input id="f-teacher" list="teachers"></div>
-  <datalist id="teachers"></datalist>
+  <div class="row courseonly"><label>предмет</label><span class="seg" id="f-subj"></span></div>
+  <div class="row courseonly"><label>часть</label><span class="seg" id="f-part"></span></div>
+  <div class="row courseonly"><label>название</label><input id="f-name"></div>
+  <div class="row courseonly"><label>преподаватель</label><span class="seg" id="f-teachers"></span></div>
+  <div class="row courseonly"><input id="f-teacher" class="off" placeholder="Мигаль Т."></div>
   <div class="row courseonly"><label>время</label><input id="f-time" placeholder="18:00" inputmode="numeric"></div>
   <div class="row courseonly"><label>минут</label><input id="f-dur" placeholder="90" inputmode="numeric"></div>
   <div class="row courseonly"><label>занятий</label>
@@ -341,7 +345,6 @@ function render(){
   });
   document.getElementById("view").innerHTML=h+"</div></div>";
   document.getElementById("sub").textContent=data.subtitle||"";
-  fillTeachers();
   countChanges();
 }
 </script>
@@ -439,6 +442,10 @@ function panel(){
     document.getElementById("p-title").textContent="пауза";
     document.getElementById("p-where").textContent=
       (streams.filter(function(x){return x.id===p.stream;})[0]||{}).name||p.stream;
+    document.getElementById("f-pstream").innerHTML=streams.map(function(st){
+      return '<button data-pstream="'+esc(st.id)+'"'+(st.id===p.stream?' class="on"':"")+">"+
+             esc(st.name)+"</button>";
+    }).join("");
     document.getElementById("f-why").value=p.why;
     document.getElementById("f-plen").textContent=p.len;
     document.getElementById("f-pstart").textContent=fmt(D(p.from));
@@ -453,7 +460,23 @@ function panel(){
   document.getElementById("p-title").textContent=c.isNew?"новый курс":"курс";
   document.getElementById("p-where").textContent=c.streamName+" · "+c.group;
   document.getElementById("drop").className=c.isNew?"":"off";
+  var np=nameParts(c.name), subs=subjectsKnown(), parts=partsKnown();
+  var ownSub=subs.indexOf(np[0])>=0;
+  document.getElementById("f-subj").innerHTML=subs.map(function(b){
+    return '<button data-subj="'+esc(b)+'"'+(ownSub&&b===np[0]?' class="on"':"")+">"+esc(b)+"</button>";
+  }).join("")+'<button data-subj="*"'+(ownSub?"":' class="on"')+">другое</button>";
+  document.getElementById("f-part").innerHTML=
+    '<button data-part=""'+(np[1]?"":' class="on"')+">—</button>"+parts.map(function(t){
+      return '<button data-part="'+esc(t)+'"'+(t===np[1]?' class="on"':"")+">"+esc(t)+"</button>";
+    }).join("");
+  document.getElementById("f-name").className=ownSub?"off":"";
   document.getElementById("f-name").value=c.name;
+
+  var tt=teachersKnown(), ownT=tt.indexOf(c.teacher)>=0;
+  document.getElementById("f-teachers").innerHTML=tt.map(function(t){
+    return '<button data-teacher="'+esc(t)+'"'+(t===c.teacher?' class="on"':"")+">"+esc(t)+"</button>";
+  }).join("")+'<button data-teacher="*"'+(ownT?"":' class="on"')+">новый</button>";
+  document.getElementById("f-teacher").className=ownT?"off":"";
   document.getElementById("f-teacher").value=c.teacher;
   document.getElementById("f-time").value=c.time;
   document.getElementById("f-dur").value=c.dur;
@@ -464,6 +487,13 @@ function panel(){
      ещё не отправлен: у заведённого это переезд, а бот его не умеет. */
   show("slotonly",c.isNew);
   if(c.isNew){
+    /* Групп всего две, и набирать их руками незачем. Кнопка «другая» остаётся
+       на случай, когда появляется группа, которой ещё не было. */
+    var known=groupsKnown(), own=known.indexOf(c.group)>=0;
+    document.getElementById("f-groups").innerHTML=known.map(function(g){
+      return '<button data-group="'+esc(g)+'"'+(g===c.group?' class="on"':"")+">"+esc(g)+"</button>";
+    }).join("")+'<button data-group="*"'+(own?"":' class="on"')+">другая</button>";
+    document.getElementById("f-group").className=own?"off":"";
     document.getElementById("f-group").value=c.group;
     document.getElementById("f-stream").innerHTML=streams.map(function(st){
       return '<button data-stream="'+esc(st.id)+'"'+(st.id===c.stream?' class="on"':"")+">"+
@@ -476,12 +506,44 @@ function panel(){
   room();
 }
 
-function fillTeachers(){
+/* Названия курсов устроены одинаково: предмет плюс приписка. Из тех, что уже
+   есть, собираем оба списка — набирать руками нечего, а «другое» остаётся на
+   случай, когда появляется что-то новое. */
+function nameParts(name){
+  var i=String(name).indexOf(" ");
+  return i<0 ? [name,""] : [name.slice(0,i), name.slice(i+1)];
+}
+function subjectsKnown(){
+  var seen={},out=[];
+  courses.forEach(function(c){
+    if(c.isNew)return;
+    var b=nameParts(c.name)[0];
+    if(!seen[b]){seen[b]=1;out.push(b);}
+  });
+  return out.sort();
+}
+function partsKnown(){
+  var seen={},out=[];
+  courses.forEach(function(c){
+    if(c.isNew)return;
+    var t=nameParts(c.name)[1];
+    if(t&&!seen[t]){seen[t]=1;out.push(t);}
+  });
+  return out.sort();
+}
+function teachersKnown(){
   var seen={},out=[];
   courses.forEach(function(c){if(c.teacher&&!seen[c.teacher]){seen[c.teacher]=1;out.push(c.teacher);}});
-  document.getElementById("teachers").innerHTML=
-    out.sort().map(function(t){return '<option value="'+esc(t)+'">';}).join("");
+  return out.sort();
 }
+
+function groupsKnown(){
+  var seen={},out=[];
+  courses.forEach(function(c){if(!c.isNew&&!seen[c.group]){seen[c.group]=1;out.push(c.group);}});
+  return out.sort();
+}
+
+
 
 document.getElementById("f-why").addEventListener("input",function(){
   if(!selP)return;
@@ -497,7 +559,11 @@ document.getElementById("f-why").addEventListener("input",function(){
     if(id==="f-teacher")c.teacher=this.value;
     if(id==="f-time")c.time=this.value;
     if(id==="f-dur")c.dur=this.value;
-    if(id==="f-group"&&c.isNew)c.group=this.value;
+    if(id==="f-group"&&c.isNew){
+      c.group=this.value;
+      /* панель целиком не перерисовываем: это сбросило бы фокус из поля */
+      document.getElementById("p-where").textContent=c.streamName+" \u00b7 "+c.group;
+    }
     if(id==="f-name"||id==="f-teacher"||id==="f-time"||id==="f-group"){render();}
     countChanges();
   });
@@ -512,11 +578,55 @@ document.getElementById("panel").addEventListener("click",function(ev){
       setPause(p,p.from,len,p.why); after();
     }
     if(pwk){setPause(p,iso(addD(D(p.from),+pwk*7)),p.len,p.why); after();}
+    var pst=ev.target.getAttribute("data-pstream");
+    if(pst&&pst!==p.stream){
+      /* Пауза переезжает в другой поток теми же неделями: снимаем со старого,
+         ставим на новый. Занятия обоих потоков пересчитает бот. */
+      for(var i=0;i<p.len;i++)delete skips[p.stream][iso(addD(D(p.from),i*7))];
+      for(i=0;i<p.len;i++)skips[pst][iso(addD(D(p.from),i*7))]=p.why;
+      selP={stream:pst, from:p.from};
+      after();
+    }
     return;
   }
   var c=sel&&find(sel); if(!c)return;
   var n=ev.target.getAttribute("data-n"), w=ev.target.getAttribute("data-w");
   var st=ev.target.getAttribute("data-stream"), wd=ev.target.getAttribute("data-wd");
+  var sub=ev.target.getAttribute("data-subj"), part=ev.target.getAttribute("data-part");
+  var tch=ev.target.getAttribute("data-teacher");
+  if(sub!==null&&sub!==undefined){
+    if(sub==="*"){
+      document.getElementById("f-name").className="";
+      document.getElementById("f-name").focus();
+      document.getElementById("f-name").select();
+    }else{
+      c.name=(sub+" "+nameParts(c.name)[1]).trim();
+      after();
+    }
+    return;
+  }
+  if(part!==null&&part!==undefined){
+    c.name=(nameParts(c.name)[0]+" "+part).trim();
+    after();
+    return;
+  }
+  if(tch!==null&&tch!==undefined){
+    if(tch==="*"){
+      document.getElementById("f-teacher").className="";
+      document.getElementById("f-teacher").focus();
+      document.getElementById("f-teacher").select();
+    }else{c.teacher=tch;after();}
+    return;
+  }
+  var gr=ev.target.getAttribute("data-group");
+  if(gr&&c.isNew){
+    if(gr==="*"){
+      document.getElementById("f-group").className="";
+      document.getElementById("f-group").focus();
+      document.getElementById("f-group").select();
+    }else{c.group=gr;after();}
+    return;
+  }
   if(n)resize(c,+n);
   if(w)shift(c,+w);
   if(st&&c.isNew){
