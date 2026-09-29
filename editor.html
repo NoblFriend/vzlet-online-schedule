@@ -10,6 +10,7 @@
 :root{
   --bg:#ffffff;--fg:#1b1b1a;--fg2:#6b6b66;--fg3:#96968f;
   --line:#e4e4de;--line2:#c8c8c0;--panel:#f1f1ec;--skip:#eeeeea;--accent:#2b6cb0;
+  --sh:0 1px 2px rgba(0,0,0,.08);
   --c1b:#c9daf8;--c1m:#a4c2f4;
   --c2b:#d9ead3;--c2m:#b6d7a8;
   --c3b:#f4cccc;--c3m:#ea9999;
@@ -21,6 +22,7 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#1a1a18;--fg:#eceae6;--fg2:#a2a29a;--fg3:#78786f;
   --line:#32322e;--line2:#4a4a44;--panel:#232320;--skip:#2a2a27;--accent:#7aa7d9;
+  --sh:0 1px 2px rgba(0,0,0,.4);
   --c1b:#12233f;--c1m:#a4c2f4;
   --c2b:#25331e;--c2m:#b6d7a8;
   --c3b:#3c1616;--c3m:#ea9999;
@@ -29,10 +31,11 @@
   --c6b:#2c2c26;--c6m:#e4e4de;
 }}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 -apple-system,
-     "Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-h1{font-size:17px;margin:12px 16px 2px}
-.sub{color:var(--fg2);font-size:12px;margin:0 16px 10px}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
+h1{font-size:19px;font-weight:600;margin:0;padding:16px 14px 2px}
+.sub{color:var(--fg2);font-size:13px;margin:0;padding:0 14px 12px}
 .scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
         padding:0 0 8px;border-top:1px solid var(--line)}
 .grid{display:grid;align-items:center;min-width:max-content}
@@ -56,21 +59,34 @@ h1{font-size:17px;margin:12px 16px 2px}
            background:linear-gradient(90deg,transparent,rgba(0,0,0,.12))}
 .hole{position:absolute;top:4px;height:26px;border-radius:5px;border:1px dashed var(--line2);
       opacity:.5}
-.panel{margin:10px 16px 90px;padding:12px;background:var(--panel);border-radius:10px}
+/* Панель всплывает сверху: после тычка по полосе глаз там, а не внизу
+   страницы, и лента под ней остаётся видна — правишь и сразу смотришь. */
+.panel{position:fixed;top:0;left:0;right:0;z-index:10;padding:12px 14px 10px;
+       background:var(--panel);border-bottom:1px solid var(--line2);
+       box-shadow:0 6px 18px rgba(0,0,0,.14);max-height:72vh;overflow:auto}
 .panel.off{display:none}
+.phd{display:flex;align-items:baseline;gap:8px;margin:0 0 10px}
+.phd b{font-size:15px}
+.phd span{color:var(--fg2);font-size:12px}
+.phd button{margin-left:auto}
 .row{display:flex;align-items:center;gap:8px;margin:0 0 8px}
 .row label{width:96px;color:var(--fg2);font-size:12px;flex:none}
 input{flex:1;min-width:0;background:var(--bg);color:var(--fg);border:1px solid var(--line2);
-      border-radius:6px;padding:7px 8px;font:inherit}
+      border-radius:8px;padding:7px 9px;font-family:inherit;font-size:14px}
 .step{display:flex;align-items:center;gap:6px}
 .step button{width:32px;height:32px;font-size:16px}
-button{background:var(--bg);color:var(--fg);border:1px solid var(--line2);border-radius:6px;
-       padding:7px 10px;font:inherit;cursor:pointer}
-button.main{background:var(--accent);color:#fff;border-color:transparent}
+button{background:var(--bg);color:var(--fg);border:1px solid var(--line2);border-radius:8px;
+       padding:6px 11px;font-family:inherit;font-size:13px;cursor:pointer;
+       -webkit-user-select:none;user-select:none}
+button.main{background:var(--accent);color:#fff;border-color:transparent;font-weight:600}
+button:active{box-shadow:var(--sh)}
 .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.foot{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);
-      padding:10px 16px;display:flex;gap:8px;align-items:center}
+.off{display:none}
+.bar.new{border-style:dashed}
+.foot{position:fixed;left:0;right:0;bottom:0;z-index:9;background:var(--bg);
+      border-top:1px solid var(--line);padding:9px 14px;display:flex;gap:8px;align-items:center}
 .foot .n{color:var(--fg2);font-size:12px;flex:1}
+.scroll{padding-bottom:64px}
 .err{color:#8c2b2b;font-size:12px;margin:6px 16px}
 </style>
 </head>
@@ -80,6 +96,8 @@ button.main{background:var(--accent);color:#fff;border-color:transparent}
 <div class="scroll"><div class="grid" id="grid"></div></div>
 
 <div class="panel off" id="panel">
+  <div class="phd"><b id="p-title">курс</b><span id="p-where"></span>
+    <button id="close">Свернуть</button></div>
   <div class="row"><label>курс</label><input id="f-name"></div>
   <div class="row"><label>преподаватель</label><input id="f-teacher" list="teachers"></div>
   <datalist id="teachers"></datalist>
@@ -91,7 +109,10 @@ button.main{background:var(--accent);color:#fff;border-color:transparent}
   <div class="row"><label>начало</label>
     <span class="step"><button data-w="-1">◀</button><b id="f-start">—</b><button data-w="1">▶</button></span>
   </div>
-  <div class="acts"><button id="close">Свернуть</button></div>
+  <div class="acts">
+    <button id="add">+ курс в этот ряд</button>
+    <button id="drop" class="off">Убрать</button>
+  </div>
 </div>
 
 <div class="err" id="err"></div>
@@ -119,7 +140,7 @@ var WD=["пн","вт","ср","чт","пт","сб","вс"];
 var MON=["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
 
 var data = typeof SCHEDULE !== "undefined" ? SCHEDULE : null;
-var courses = [], weeks = [], skips = {}, sel = null;
+var courses = [], weeks = [], skips = {}, sel = null, newN = 0, drag = null;
 
 function build(){
   courses = [];
@@ -239,7 +260,7 @@ function bars(track,c){
   runs.push(cur);
   runs.forEach(function(run,n){
     var b=document.createElement("div");
-    b.className="bar"+(sel===c.key?" sel":"");
+    b.className="bar"+(sel===c.key?" sel":"")+(c.isNew?" new":"");
     b.style.left=(run[0]*30+1)+"px";
     b.style.width=(run.length*30-3)+"px";
     b.style.background="var(--c"+c.color+"b)";
@@ -268,11 +289,16 @@ function diffOf(c){
 }
 
 function countChanges(){
-  var n=0;
-  courses.forEach(function(c){ if(Object.keys(diffOf(c)).length)n++; });
-  document.getElementById("n").textContent =
-    n ? ("изменено курсов: "+n) : "правок нет";
-  return n;
+  var n=0,fresh=0;
+  courses.forEach(function(c){
+    if(c.isNew)fresh++;
+    else if(Object.keys(diffOf(c)).length)n++;
+  });
+  var say=[];
+  if(n)say.push("изменено: "+n);
+  if(fresh)say.push("новых: "+fresh);
+  document.getElementById("n").textContent=say.join(", ")||"правок нет";
+  return n+fresh;
 }
 
 function shift(c,dw){
@@ -289,7 +315,8 @@ function resize(c,dn){
   after();
 }
 
-function after(){ build2(); render(); panel(); }
+/* Во время перетаскивания ленту не подводим: она дралась бы с пальцем. */
+function after(){ build2(); render(); panel(); if(!drag)focusBar(); }
 
 /* Пересобираем только границы недель: курсы уже в памяти, заново их читать
    из schedule.js нельзя — потеряются правки. */
@@ -310,12 +337,31 @@ function panel(){
   var box=document.getElementById("panel"),c=sel&&find(sel);
   if(!c){box.className="panel off";return;}
   box.className="panel";
+  document.getElementById("p-title").textContent=c.isNew?"новый курс":"курс";
+  document.getElementById("p-where").textContent =
+    c.streamName+" · "+c.group+" · "+WD[(D(c.start).getUTCDay()+6)%7];
+  document.getElementById("drop").className=c.isNew?"":"off";
   document.getElementById("f-name").value=c.name;
   document.getElementById("f-teacher").value=c.teacher;
   document.getElementById("f-time").value=c.time;
   document.getElementById("f-dur").value=c.dur;
   document.getElementById("f-count").textContent=c.count;
   document.getElementById("f-start").textContent=fmt(D(c.start))+" "+WD[(D(c.start).getUTCDay()+6)%7];
+}
+
+/* Панель висит сверху и закрывает верх ленты. Поэтому после выбора подводим
+   выбранную полосу под неё: правишь курс и сразу его видишь, а не ищешь. */
+function focusBar(){
+  var bar=document.querySelector(".bar.sel");
+  if(!bar)return;
+  var box=document.getElementById("panel").getBoundingClientRect();
+  var top=(box.height||0)+10;
+  var r=bar.getBoundingClientRect();
+  if(r.top<top||r.bottom>window.innerHeight-70)
+    window.scrollBy({top:r.top-top,behavior:"smooth"});
+  var scroll=document.querySelector(".scroll");
+  var left=bar.offsetLeft-scroll.clientWidth/2+bar.offsetWidth/2;
+  scroll.scrollTo({left:Math.max(0,left),behavior:"smooth"});
 }
 
 function fillTeachers(){
@@ -344,14 +390,42 @@ document.getElementById("panel").addEventListener("click",function(ev){
 });
 document.getElementById("close").addEventListener("click",function(){sel=null;render();panel();});
 
+/* Новый курс заводится в ряду выбранного — «поток, группа, день недели» берутся
+   у него же — и встаёт на неделю после его конца: чаще всего это и есть
+   продолжение, вторая часть курса. Слот руками выбирать не надо. */
+document.getElementById("add").addEventListener("click",function(){
+  var base=sel&&find(sel); if(!base)return;
+  var occ=weeksOf(base), last=occ.length?occ[occ.length-1]:monday(D(base.start));
+  var startMon=addD(last,7);
+  var fresh={
+    key:"new:"+(++newN), isNew:true, stream:base.stream, streamName:base.streamName,
+    group:base.group, name:"Новый курс", teacher:base.teacher, time:base.time,
+    dur:base.dur, count:1, color:6,
+    start:iso(addD(startMon,(D(base.start).getUTCDay()+6)%7))
+  };
+  fresh.was={name:fresh.name,teacher:fresh.teacher,time:fresh.time,
+             dur:fresh.dur,count:fresh.count,start:fresh.start};
+  courses.push(fresh);
+  sel=fresh.key;
+  after();
+  document.getElementById("f-name").focus();
+  document.getElementById("f-name").select();
+});
+
+document.getElementById("drop").addEventListener("click",function(){
+  var c=sel&&find(sel); if(!c||!c.isNew)return;
+  courses=courses.filter(function(x){return x.key!==c.key;});
+  sel=null;after();
+});
+
 /* ---- перетаскивание ----------------------------------------------------- */
 
-var drag=null;
 document.getElementById("grid").addEventListener("pointerdown",function(ev){
   var bar=ev.target.closest ? ev.target.closest(".bar") : null;
   if(!bar)return;
   var c=find(bar.dataset.key); if(!c)return;
-  sel=c.key; render(); panel();
+  var was=sel; sel=c.key; render(); panel();
+  if(was!==sel)focusBar();
   drag={c:c, x0:ev.clientX, grip:!!ev.target.getAttribute("data-grip"),
         start0:c.start, count0:c.count};
   ev.preventDefault();
@@ -375,17 +449,27 @@ window.addEventListener("pointerup",function(){drag=null;});
 /* ---- отправка ----------------------------------------------------------- */
 
 function payload(){
-  var edit=[];
+  var edit=[],add=[];
   courses.forEach(function(c){
+    if(c.isNew){
+      var one={stream:c.stream,group:c.group,name:c.name,start:c.start,count:c.count};
+      if(c.teacher)one.teacher=c.teacher;
+      if(c.time)one.time=c.time;
+      if(c.dur)one.duration=c.dur;
+      add.push(one);
+      return;
+    }
     var d=diffOf(c);
     if(Object.keys(d).length){d.id=c.key;edit.push(d);}
   });
-  return {v:1, edit:edit, add:[]};
+  return {v:1, edit:edit, add:add};
 }
 
 document.getElementById("send").addEventListener("click",function(){
   var err=document.getElementById("err");
   if(!countChanges()){err.textContent="Нечего отправлять: правок нет.";return;}
+  var bad=courses.filter(function(c){return c.isNew&&(!c.name||c.name==="Новый курс");});
+  if(bad.length){err.textContent="У нового курса не задано название.";return;}
   var body=JSON.stringify(payload());
   if(body.length>4000){err.textContent="Слишком много правок за раз, отправьте частями.";return;}
   err.textContent="";
@@ -394,6 +478,7 @@ document.getElementById("send").addEventListener("click",function(){
 });
 
 document.getElementById("reset").addEventListener("click",function(){
+  courses=courses.filter(function(c){return !c.isNew;});
   courses.forEach(function(c){
     c.name=c.was.name;c.teacher=c.was.teacher;c.time=c.was.time;
     c.dur=c.was.dur;c.count=c.was.count;c.start=c.was.start;
