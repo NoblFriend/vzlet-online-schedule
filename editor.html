@@ -125,7 +125,8 @@ button.main{background:var(--fg);color:var(--bg);border-color:transparent;font-w
 <div class="wrap">
   <h1>Лента сезона</h1>
   <p class="sub" id="sub">загрузка…</p>
-  <p class="hint">Тяните занятия — сдвинется начало курса. Тяните за правый край — изменится длина.</p>
+  <p class="hint">Тяните занятия — сдвинется начало курса. Тяните за правый край — изменится длина.
+     Новый курс встаёт в ряд выбранного; поток, группу и день недели можно сменить в панели.</p>
   <div id="view"></div>
   <p class="err" id="err"></p>
 </div>
@@ -153,7 +154,6 @@ button.main{background:var(--fg);color:var(--bg);border-color:transparent;font-w
 <div class="foot">
   <span class="n" id="n">правок нет</span>
   <button id="add">+ курс</button>
-  <button id="addrow">+ ряд</button>
   <button id="reset">Сброс</button>
   <button class="main" id="send">Отправить</button>
 </div>
@@ -485,29 +485,26 @@ function fresh(base){
   return c;
 }
 
+/* Новый курс встаёт в ряд выбранного — поток, группа и день берутся у него, а
+   начало ставится на неделю после его конца: чаще всего это и есть продолжение,
+   вторая часть. Ничего не выбрано — берём первый поток и первую неделю, а ряд
+   меняется в панели. Отдельная кнопка «+ ряд» для этого не нужна. */
 document.getElementById("add").addEventListener("click",function(){
-  var base=sel&&find(sel);
-  if(!base){
-    document.getElementById("err").textContent=
-      "Сначала выберите курс того ряда, куда добавить. Новый ряд — кнопка «+ ряд».";
-    return;
-  }
   document.getElementById("err").textContent="";
-  var occ=weeksOf(base), last=occ.length?D(occ[occ.length-1]):monday(D(base.start));
-  fresh({stream:base.stream, streamName:base.streamName, group:base.group,
-         name:"Новый курс", teacher:base.teacher, time:base.time, dur:base.dur,
-         start:iso(addD(last,7+wdIdx(D(base.start))))});
+  var base=sel&&find(sel);
+  if(base){
+    var occ=weeksOf(base), last=occ.length?D(occ[occ.length-1]):monday(D(base.start));
+    fresh({stream:base.stream, streamName:base.streamName, group:base.group,
+           name:"Новый курс", teacher:base.teacher, time:base.time, dur:base.dur,
+           start:iso(addD(last,7+wdIdx(D(base.start))))});
+  }else{
+    var st=streams[0]; if(!st)return;
+    fresh({stream:st.id, streamName:st.name, group:"10-11", name:"Новый курс",
+           teacher:"", time:"", start:allWeeks()[0]});
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
   document.getElementById("f-name").focus();
   document.getElementById("f-name").select();
-});
-
-document.getElementById("addrow").addEventListener("click",function(){
-  var st=streams[0]; if(!st)return;
-  document.getElementById("err").textContent="";
-  fresh({stream:st.id, streamName:st.name, group:"10-11", name:"Новый курс",
-         teacher:"", time:"", start:allWeeks()[0]});
-  window.scrollTo({top:0,behavior:"smooth"});
-  document.getElementById("f-group").focus();
 });
 
 document.getElementById("drop").addEventListener("click",function(){
