@@ -608,9 +608,14 @@ document.getElementById("panel").addEventListener("click",function(ev){
       setPause(p,p.from,len,p.why); after();
     }
     if(pwk){
-      var from=iso(addD(D(p.from),+pwk*7));
-      var hit2=busy(p.stream,from,p.len,p,p.why);
-      if(hit2){refuse(hit2);return;}
+      /* Занятую неделю перешагиваем, а не упираемся в неё: шаг — это «дальше
+         в эту сторону», и останавливаться на полпути человек не просил. */
+      var dir=+pwk, from=null;
+      for(var step=1;step<=52;step++){
+        var cand=iso(addD(D(p.from),dir*step*7));
+        if(!busy(p.stream,cand,p.len,p,p.why)){from=cand;break;}
+      }
+      if(!from){refuse(iso(addD(D(p.from),dir*7)));return;}
       document.getElementById("err").textContent="";
       setPause(p,from,p.len,p.why); after();
     }
