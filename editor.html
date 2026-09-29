@@ -65,6 +65,11 @@ h1{font-size:19px;font-weight:600;margin:0;padding:16px 14px 2px}
        background:var(--panel);border-bottom:1px solid var(--line2);
        box-shadow:0 6px 18px rgba(0,0,0,.14);max-height:72vh;overflow:auto}
 .panel.off{display:none}
+.seg{display:inline-flex;background:var(--bg);border:1px solid var(--line);border-radius:9px;
+     padding:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;color:var(--fg2);font-size:13px;padding:4px 9px;
+            border-radius:7px}
+.seg button.on{background:var(--panel);color:var(--fg);font-weight:600;box-shadow:var(--sh)}
 .phd{display:flex;align-items:baseline;gap:8px;margin:0 0 10px}
 .phd b{font-size:15px}
 .phd span{color:var(--fg2);font-size:12px}
@@ -82,6 +87,11 @@ button.main{background:var(--accent);color:#fff;border-color:transparent;font-we
 button:active{box-shadow:var(--sh)}
 .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .off{display:none}
+.seg{display:inline-flex;background:var(--bg);border:1px solid var(--line);border-radius:9px;
+     padding:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;color:var(--fg2);font-size:13px;padding:4px 9px;
+            border-radius:7px}
+.seg button.on{background:var(--panel);color:var(--fg);font-weight:600;box-shadow:var(--sh)}
 .bar.new{border-style:dashed}
 .foot{position:fixed;left:0;right:0;bottom:0;z-index:9;background:var(--bg);
       border-top:1px solid var(--line);padding:9px 14px;display:flex;gap:8px;align-items:center}
@@ -98,6 +108,9 @@ button:active{box-shadow:var(--sh)}
 <div class="panel off" id="panel">
   <div class="phd"><b id="p-title">курс</b><span id="p-where"></span>
     <button id="close">Свернуть</button></div>
+  <div class="row slotonly"><label>поток</label><span class="seg" id="f-stream"></span></div>
+  <div class="row slotonly"><label>группа</label><input id="f-group" placeholder="10-11"></div>
+  <div class="row slotonly"><label>день</label><span class="seg" id="f-wd"></span></div>
   <div class="row"><label>курс</label><input id="f-name"></div>
   <div class="row"><label>преподаватель</label><input id="f-teacher" list="teachers"></div>
   <datalist id="teachers"></datalist>
@@ -119,6 +132,7 @@ button:active{box-shadow:var(--sh)}
 
 <div class="foot">
   <span class="n" id="n">правок нет</span>
+  <button id="addrow">+ ряд</button>
   <button id="reset">Сбросить</button>
   <button class="main" id="send">Отправить</button>
 </div>
@@ -341,6 +355,22 @@ function panel(){
   document.getElementById("p-where").textContent =
     c.streamName+" · "+c.group+" · "+WD[(D(c.start).getUTCDay()+6)%7];
   document.getElementById("drop").className=c.isNew?"":"off";
+  // Ряд — это поток, группа и день недели. Менять его можно только у курса,
+  // который ещё не отправлен: у заведённого это переезд, а его бот не умеет.
+  Array.prototype.forEach.call(document.querySelectorAll(".slotonly"),function(el){
+    el.style.display=c.isNew?"":"none";
+  });
+  if(c.isNew){
+    document.getElementById("f-group").value=c.group;
+    document.getElementById("f-stream").innerHTML=(data.streams||[]).map(function(st){
+      return '<button data-stream="'+esc(st.id)+'"'+(st.id===c.stream?' class="on"':"")+">"+
+             esc(st.name||st.id)+"</button>";
+    }).join("");
+    var wd=(D(c.start).getUTCDay()+6)%7;
+    document.getElementById("f-wd").innerHTML=WD.map(function(t,i){
+      return '<button data-wd="'+i+'"'+(i===wd?' class="on"':"")+">"+t+"</button>";
+    }).join("");
+  }
   document.getElementById("f-name").value=c.name;
   document.getElementById("f-teacher").value=c.teacher;
   document.getElementById("f-time").value=c.time;
@@ -371,13 +401,14 @@ function fillTeachers(){
     out.sort().map(function(t){return '<option value="'+esc(t)+'">';}).join("");
 }
 
-["f-name","f-teacher","f-time","f-dur"].forEach(function(id){
+["f-name","f-teacher","f-time","f-dur","f-group"].forEach(function(id){
   document.getElementById(id).addEventListener("input",function(){
     var c=sel&&find(sel); if(!c)return;
     if(id==="f-name")c.name=this.value;
     if(id==="f-teacher")c.teacher=this.value;
     if(id==="f-time")c.time=this.value;
     if(id==="f-dur")c.dur=this.value;
+    if(id==="f-group"&&c.isNew){c.group=this.value;render();focusBar();}
     countChanges();
   });
 });
@@ -385,8 +416,17 @@ function fillTeachers(){
 document.getElementById("panel").addEventListener("click",function(ev){
   var c=sel&&find(sel); if(!c)return;
   var n=ev.target.getAttribute("data-n"), w=ev.target.getAttribute("data-w");
+  var st=ev.target.getAttribute("data-stream"), wd=ev.target.getAttribute("data-wd");
   if(n)resize(c,+n);
   if(w)shift(c,+w);
+  if(st&&c.isNew){
+    var stream=(data.streams||[]).filter(function(x){return x.id===st;})[0];
+    c.stream=st;c.streamName=stream?(stream.name||st):st;after();
+  }
+  if(wd!==null&&wd!==undefined&&c.isNew){
+    c.start=iso(addD(monday(D(c.start)),+wd));   /* тот же недельный столбец, другой день */
+    after();
+  }
 });
 document.getElementById("close").addEventListener("click",function(){sel=null;render();panel();});
 
@@ -410,6 +450,26 @@ document.getElementById("add").addEventListener("click",function(){
   after();
   document.getElementById("f-name").focus();
   document.getElementById("f-name").select();
+});
+
+/* Ряд с нуля: поток, группа и день выбираются в панели. Нужен, когда появляется
+   группа или день недели, которых в расписании ещё не было, — иначе новый курс
+   некуда положить: «+ курс в этот ряд» берёт слот у соседа. */
+document.getElementById("addrow").addEventListener("click",function(){
+  var st=(data.streams||[])[0]; if(!st)return;
+  var first=weeks.length?weeks[0]:monday(new Date());
+  var fresh={
+    key:"new:"+(++newN), isNew:true, stream:st.id, streamName:st.name||st.id,
+    group:"10-11", name:"Новый курс", teacher:"", time:"", dur:"", count:1, color:6,
+    start:iso(first)
+  };
+  fresh.was={name:fresh.name,teacher:fresh.teacher,time:fresh.time,
+             dur:fresh.dur,count:fresh.count,start:fresh.start};
+  courses.push(fresh);
+  sel=fresh.key;
+  after();
+  window.scrollTo({top:0,behavior:"smooth"});
+  document.getElementById("f-group").focus();
 });
 
 document.getElementById("drop").addEventListener("click",function(){
