@@ -17,7 +17,7 @@
   --c4b:#d9d2e9;--c4m:#b4a7d6;
   --c5b:#ead1dc;--c5m:#d5a6bd;
   --c6b:#f1f1ec;--c6m:#e4e4de;
-  --col:30px;--lab:104px;
+  --col:34px;--lab:92px;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#1a1a18;--fg:#eceae6;--fg2:#a2a29a;--fg3:#78786f;
@@ -34,31 +34,39 @@
 body{margin:0;background:var(--bg);color:var(--fg);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
-h1{font-size:19px;font-weight:600;margin:0;padding:16px 14px 2px}
-.sub{color:var(--fg2);font-size:13px;margin:0;padding:0 14px 12px}
-.scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
-        padding:0 0 8px;border-top:1px solid var(--line)}
+.wrap{max-width:880px;margin:0 auto;padding:16px 14px 72px}
+h1{font-size:19px;font-weight:600;margin:0 0 2px}
+.sub{color:var(--fg2);font-size:13px;margin:0 0 6px}
+.hint{font-size:11px;color:var(--fg3);margin:0 0 12px}
+.box{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--bg)}
+.scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
 .grid{display:grid;align-items:center;min-width:max-content}
-.hd{position:sticky;top:0;z-index:3;background:var(--bg);font-size:10px;color:var(--fg3);
-    text-align:center;padding:5px 0;border-bottom:1px solid var(--line)}
-.hd.mon{color:var(--fg2);font-weight:600}
-.lab{position:sticky;left:0;z-index:2;background:var(--bg);padding:5px 8px;font-size:11px;
-     border-right:1px solid var(--line2);white-space:nowrap}
-.lab b{display:block;font-size:12px}
-.lab span{color:var(--fg2)}
-.grp{grid-column:1/-1;background:var(--panel);font-size:11px;font-weight:600;
-     padding:4px 8px;position:sticky;left:0}
-.slot{height:34px;border-bottom:1px solid var(--line);position:relative}
+.hd{position:sticky;top:0;z-index:3;background:var(--bg);font-size:12px;color:var(--fg2);
+    text-align:center;padding:8px 0 7px;border-bottom:1px solid var(--line);font-weight:600}
+.hd.mon{color:var(--fg3);font-weight:400;font-size:10px;text-transform:uppercase;
+        letter-spacing:.04em}
+.lab{position:sticky;left:0;z-index:2;background:var(--bg);padding:6px 10px;
+     border-right:1px solid var(--line);white-space:nowrap}
+.lab b{display:block;font-size:14px;font-weight:600}
+.lab span{color:var(--fg3);font-size:11px}
+.grp{grid-column:1/-1;background:var(--panel);font-size:11px;font-weight:600;color:var(--fg2);
+     padding:6px 10px;position:sticky;left:0;text-transform:uppercase;letter-spacing:.04em;
+     border-bottom:1px solid var(--line)}
+.slot{height:44px;border-bottom:1px solid var(--line);position:relative}
 .wk{border-right:1px solid var(--line)}
 .wk.skip{background:var(--skip)}
-.bar{position:absolute;top:4px;height:26px;border-radius:5px;display:flex;align-items:center;
-     padding:0 6px;font-size:11px;white-space:nowrap;overflow:hidden;cursor:grab;
-     border:1px solid var(--line2);touch-action:none}
+.wk:last-child{border-right:0}
+/* Полоса выглядит как карточка занятия на сайте: скруглённая, пастельная,
+   с цветной чертой слева. */
+.bar{position:absolute;top:5px;height:34px;border-radius:8px;display:flex;align-items:center;
+     padding:0 8px;font-size:12px;line-height:1.2;white-space:nowrap;overflow:hidden;
+     cursor:grab;touch-action:none;box-shadow:var(--sh)}
+.bar::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+             border-radius:8px 0 0 8px;background:var(--mid)}
 .bar.sel{outline:2px solid var(--accent);outline-offset:1px;z-index:2}
-.bar .grip{position:absolute;right:0;top:0;bottom:0;width:14px;cursor:ew-resize;
-           background:linear-gradient(90deg,transparent,rgba(0,0,0,.12))}
-.hole{position:absolute;top:4px;height:26px;border-radius:5px;border:1px dashed var(--line2);
-      opacity:.5}
+.bar .grip{position:absolute;right:0;top:0;bottom:0;width:16px;cursor:ew-resize;
+           border-radius:0 8px 8px 0;background:linear-gradient(90deg,transparent,var(--mid))}
+.bar.new{border:1px dashed var(--line2)}
 /* Панель всплывает сверху: после тычка по полосе глаз там, а не внизу
    страницы, и лента под ней остаётся видна — правишь и сразу смотришь. */
 .panel{position:fixed;top:0;left:0;right:0;z-index:10;padding:12px 14px 10px;
@@ -94,16 +102,21 @@ button:active{box-shadow:var(--sh)}
 .seg button.on{background:var(--panel);color:var(--fg);font-weight:600;box-shadow:var(--sh)}
 .bar.new{border-style:dashed}
 .foot{position:fixed;left:0;right:0;bottom:0;z-index:9;background:var(--bg);
-      border-top:1px solid var(--line);padding:9px 14px;display:flex;gap:8px;align-items:center}
-.foot .n{color:var(--fg2);font-size:12px;flex:1}
+      border-top:1px solid var(--line);padding:9px 12px;display:flex;gap:6px;align-items:center}
+.foot .n{color:var(--fg2);font-size:12px;flex:1;min-width:0;white-space:nowrap;
+         overflow:hidden;text-overflow:ellipsis}
+.foot button{white-space:nowrap;padding:7px 9px}
 .scroll{padding-bottom:64px}
 .err{color:#8c2b2b;font-size:12px;margin:6px 16px}
 </style>
 </head>
 <body>
-<h1>Лента сезона</h1>
-<p class="sub" id="sub">загрузка…</p>
-<div class="scroll"><div class="grid" id="grid"></div></div>
+<div class="wrap">
+  <h1>Лента сезона</h1>
+  <p class="sub" id="sub">загрузка…</p>
+  <p class="hint">Потяните полосу — сдвинется начало. Потяните правый край — изменится длина.</p>
+  <div class="box"><div class="scroll"><div class="grid" id="grid"></div></div></div>
+</div>
 
 <div class="panel off" id="panel">
   <div class="phd"><b id="p-title">курс</b><span id="p-where"></span>
@@ -122,18 +135,16 @@ button:active{box-shadow:var(--sh)}
   <div class="row"><label>начало</label>
     <span class="step"><button data-w="-1">◀</button><b id="f-start">—</b><button data-w="1">▶</button></span>
   </div>
-  <div class="acts">
-    <button id="add">+ курс в этот ряд</button>
-    <button id="drop" class="off">Убрать</button>
-  </div>
+  <div class="acts"><button id="drop" class="off">Убрать курс</button></div>
 </div>
 
 <div class="err" id="err"></div>
 
 <div class="foot">
   <span class="n" id="n">правок нет</span>
+  <button id="add">+ курс</button>
   <button id="addrow">+ ряд</button>
-  <button id="reset">Сбросить</button>
+  <button id="reset">Сброс</button>
   <button class="main" id="send">Отправить</button>
 </div>
 
@@ -151,6 +162,8 @@ function addD(d,n){return new Date(d.getTime()+n*86400000);}
 function monday(d){var w=(d.getUTCDay()+6)%7;return addD(d,-w);}
 function fmt(d){return ("0"+d.getUTCDate()).slice(-2)+"."+("0"+(d.getUTCMonth()+1)).slice(-2);}
 var WD=["пн","вт","ср","чт","пт","сб","вс"];
+/* ширина недельной колонки: та же, что в CSS, --col */
+var COL=34;
 var MON=["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
 
 var data = typeof SCHEDULE !== "undefined" ? SCHEDULE : null;
@@ -244,7 +257,7 @@ function render(){
     weeks.forEach(function(w){
       var c=document.createElement("div");
       c.className="wk"+(skips[slot.stream][iso(w)]?" skip":"");
-      c.style.cssText+="position:absolute;top:0;bottom:0;left:"+(idx(w)*30)+"px;width:30px";
+      c.style.cssText+="position:absolute;top:0;bottom:0;left:"+(idx(w)*COL)+"px;width:"+COL+"px";
       track.appendChild(c);
     });
     slot.list.forEach(function(c){ bars(track,c); });
@@ -275,10 +288,10 @@ function bars(track,c){
   runs.forEach(function(run,n){
     var b=document.createElement("div");
     b.className="bar"+(sel===c.key?" sel":"")+(c.isNew?" new":"");
-    b.style.left=(run[0]*30+1)+"px";
-    b.style.width=(run.length*30-3)+"px";
+    b.style.left=(run[0]*COL+2)+"px";
+    b.style.width=(run.length*COL-4)+"px";
     b.style.background="var(--c"+c.color+"b)";
-    b.style.borderColor="var(--c"+c.color+"m)";
+    b.style.setProperty("--mid","var(--c"+c.color+"m)");
     b.textContent=n===0?c.name:"";
     b.dataset.key=c.key;
     if(n===runs.length-1){
@@ -349,7 +362,7 @@ function build2(){
 
 function panel(){
   var box=document.getElementById("panel"),c=sel&&find(sel);
-  if(!c){box.className="panel off";return;}
+  if(!c){box.className="panel off";room();return;}
   box.className="panel";
   document.getElementById("p-title").textContent=c.isNew?"новый курс":"курс";
   document.getElementById("p-where").textContent =
@@ -371,6 +384,7 @@ function panel(){
       return '<button data-wd="'+i+'"'+(i===wd?' class="on"':"")+">"+t+"</button>";
     }).join("");
   }
+  room();
   document.getElementById("f-name").value=c.name;
   document.getElementById("f-teacher").value=c.teacher;
   document.getElementById("f-time").value=c.time;
@@ -379,9 +393,19 @@ function panel(){
   document.getElementById("f-start").textContent=fmt(D(c.start))+" "+WD[(D(c.start).getUTCDay()+6)%7];
 }
 
-/* Панель висит сверху и закрывает верх ленты. Поэтому после выбора подводим
-   выбранную полосу под неё: правишь курс и сразу его видишь, а не ищешь. */
+/* Панель висит сверху и закрывает верх ленты. Освобождаем под неё место:
+   прокруткой полосу из первого ряда под панель не увести — страница и так
+   наверху, опускать её некуда. */
+function room(){
+  var box=document.getElementById("panel");
+  var open=box.className.indexOf("off")<0;
+  document.querySelector(".wrap").style.paddingTop =
+    (open ? box.getBoundingClientRect().height + 16 : 16) + "px";
+}
+
+/* После выбора подводим полосу под панель: правишь курс и сразу его видишь. */
 function focusBar(){
+  room();
   var bar=document.querySelector(".bar.sel");
   if(!bar)return;
   var box=document.getElementById("panel").getBoundingClientRect();
@@ -434,7 +458,13 @@ document.getElementById("close").addEventListener("click",function(){sel=null;re
    у него же — и встаёт на неделю после его конца: чаще всего это и есть
    продолжение, вторая часть курса. Слот руками выбирать не надо. */
 document.getElementById("add").addEventListener("click",function(){
-  var base=sel&&find(sel); if(!base)return;
+  var base=sel&&find(sel);
+  if(!base){
+    document.getElementById("err").textContent =
+      "Сначала выберите полосу того ряда, куда добавить курс. Новый ряд — кнопка «+ ряд».";
+    return;
+  }
+  document.getElementById("err").textContent="";
   var occ=weeksOf(base), last=occ.length?occ[occ.length-1]:monday(D(base.start));
   var startMon=addD(last,7);
   var fresh={
@@ -492,7 +522,7 @@ document.getElementById("grid").addEventListener("pointerdown",function(ev){
 });
 window.addEventListener("pointermove",function(ev){
   if(!drag)return;
-  var dw=Math.round((ev.clientX-drag.x0)/30);
+  var dw=Math.round((ev.clientX-drag.x0)/COL);
   if(drag.grip){
     var n=Math.max(1,Math.min(60,drag.count0+dw));
     if(n!==drag.c.count){drag.c.count=n;after();}
