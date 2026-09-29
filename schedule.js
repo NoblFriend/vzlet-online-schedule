@@ -2,6 +2,7 @@ var SCHEDULE =
 {
   "title": "Расписание",
   "subtitle": "Взлёт · Онлайн поток · Сезон 26/27",
+  "tz": "Europe/Moscow",
   "streams": [
     {
       "id": "всерос",
