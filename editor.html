@@ -74,6 +74,8 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
 .twk.off{color:var(--fg3)}
 .tskip{display:flex;align-items:center;justify-content:center;margin:4px 1px;border-radius:6px;overflow:hidden;
   background:repeating-linear-gradient(135deg,var(--hatch) 0 1.5px,transparent 1.5px 7px)}
+.tskip{cursor:pointer}
+.tskip.sel{outline:2px solid var(--fg);outline-offset:-2px;border-radius:6px}
 .tskip span{writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;color:var(--fg2);background:var(--bg);
   padding:6px 1px;border-radius:4px;white-space:nowrap}
 .tskip.wide span{writing-mode:horizontal-tb;transform:none;padding:2px 8px}
@@ -137,23 +139,34 @@ button.main{background:var(--fg);color:var(--bg);border-color:transparent;font-w
   <div class="row slotonly"><label>поток</label><span class="seg" id="f-stream"></span></div>
   <div class="row slotonly"><label>группа</label><input id="f-group" placeholder="10-11"></div>
   <div class="row slotonly"><label>день</label><span class="seg" id="f-wd"></span></div>
-  <div class="row"><label>курс</label><input id="f-name"></div>
-  <div class="row"><label>преподаватель</label><input id="f-teacher" list="teachers"></div>
+  <div class="row pauseonly"><label>причина</label><input id="f-why" placeholder="очные сборы"></div>
+  <div class="row pauseonly"><label>недель</label>
+    <span class="step"><button data-pn="-1">−</button><b id="f-plen">1</b><button data-pn="1">+</button></span>
+  </div>
+  <div class="row pauseonly"><label>с недели</label>
+    <span class="step"><button data-pw="-1">◀</button><b id="f-pstart">—</b><button data-pw="1">▶</button></span>
+  </div>
+  <div class="row courseonly"><label>курс</label><input id="f-name"></div>
+  <div class="row courseonly"><label>преподаватель</label><input id="f-teacher" list="teachers"></div>
   <datalist id="teachers"></datalist>
-  <div class="row"><label>время</label><input id="f-time" placeholder="18:00" inputmode="numeric"></div>
-  <div class="row"><label>минут</label><input id="f-dur" placeholder="90" inputmode="numeric"></div>
-  <div class="row"><label>занятий</label>
+  <div class="row courseonly"><label>время</label><input id="f-time" placeholder="18:00" inputmode="numeric"></div>
+  <div class="row courseonly"><label>минут</label><input id="f-dur" placeholder="90" inputmode="numeric"></div>
+  <div class="row courseonly"><label>занятий</label>
     <span class="step"><button data-n="-1">−</button><b id="f-count">0</b><button data-n="1">+</button></span>
   </div>
-  <div class="row"><label>начало</label>
+  <div class="row courseonly"><label>начало</label>
     <span class="step"><button data-w="-1">◀</button><b id="f-start">—</b><button data-w="1">▶</button></span>
   </div>
-  <div class="acts"><button id="drop" class="off">Убрать курс</button></div>
+  <div class="acts">
+    <button id="drop" class="off">Убрать курс</button>
+    <button id="dropause" class="off">Убрать паузу</button>
+  </div>
 </div>
 
 <div class="foot">
   <span class="n" id="n">правок нет</span>
   <button id="add">+ курс</button>
+  <button id="addpause">+ пауза</button>
   <button id="reset">Сброс</button>
   <button class="main" id="send">Отправить</button>
 </div>
@@ -186,7 +199,7 @@ function subjRank(s){
 function slotLabel(c){return c.time?WDS[wdIdx(D(c.start))]+" "+c.time:"время уточняется";}
 
 var data = typeof SCHEDULE !== "undefined" ? SCHEDULE : null;
-var courses=[], skips={}, streams=[], sel=null, newN=0, drag=null;
+var courses=[], skips={}, skipsWas={}, streams=[], sel=null, selP=null, newN=0, drag=null;
 
 function load(){
   streams=(data.streams||[]).map(function(st){
@@ -202,8 +215,25 @@ function load(){
         was:{name:s.name,teacher:s.teacher||"",time:s.time||"",dur:s.duration||"",
              count:s.count,start:s.start}});
     });
+    skipsWas[st.id]=JSON.parse(JSON.stringify(skips[st.id]));
     return {id:st.id, name:st.name||st.id};
   });
+}
+
+/* Пауза — это неделя потока, на которой занятий нет. Соседние недели с одной и
+   той же причиной показываются одной плашкой, поэтому и правятся как одна. */
+function pauseRun(stream,monday){
+  var why=skips[stream][monday], from=monday, to=monday;
+  while(skips[stream][iso(addD(D(from),-7))]===why)from=iso(addD(D(from),-7));
+  while(skips[stream][iso(addD(D(to),7))]===why)to=iso(addD(D(to),7));
+  var len=Math.round((D(to)-D(from))/(7*86400000))+1;
+  return {stream:stream, from:from, len:len, why:why};
+}
+function setPause(p,from,len,why){
+  var old=pauseRun(p.stream,p.from);
+  for(var i=0;i<old.len;i++)delete skips[p.stream][iso(addD(D(old.from),i*7))];
+  for(i=0;i<len;i++)skips[p.stream][iso(addD(D(from),i*7))]=why;
+  selP={stream:p.stream, from:from};
 }
 
 /* Недели, которые занимает курс: шаг в неделю, пропущенные недели потока
@@ -279,7 +309,10 @@ function render(){
       if(!skips[sec.stream][weeks[i]]){i++;continue;}
       var why=skips[sec.stream][weeks[i]], j2=i;
       while(j2<N&&skips[sec.stream][weeks[j2]]===why)j2++;
-      h+='<div class="tskip'+(j2-i>2?" wide":"")+'" style="grid-row:'+r0+" / span "+n+
+      var mine=selP&&selP.stream===sec.stream&&
+               pauseRun(sec.stream,selP.from).from===pauseRun(sec.stream,weeks[i]).from;
+      h+='<div class="tskip'+(j2-i>2?" wide":"")+(mine?" sel":"")+'" data-skip="'+
+         esc(sec.stream)+"|"+weeks[i]+'" style="grid-row:'+r0+" / span "+n+
          ";grid-column:"+(i+2)+" / span "+(j2-i)+'"><span>'+esc(why)+"</span></div>";
       i=j2;
     }
@@ -326,17 +359,33 @@ function diffOf(c){
   return out;
 }
 
+function skipDiff(){
+  var out={};
+  streams.forEach(function(st){
+    var now=Object.keys(skips[st.id]).sort().map(function(w){
+      return {date:w, reason:skips[st.id][w]};
+    });
+    var was=Object.keys(skipsWas[st.id]).sort().map(function(w){
+      return {date:w, reason:skipsWas[st.id][w]};
+    });
+    if(JSON.stringify(now)!==JSON.stringify(was))out[st.id]=now;
+  });
+  return out;
+}
+
 function countChanges(){
   var changed=0,fresh=0;
   courses.forEach(function(c){
     if(c.isNew)fresh++;
     else if(Object.keys(diffOf(c)).length)changed++;
   });
+  var pauses=Object.keys(skipDiff()).length;
   var say=[];
   if(changed)say.push("изменено: "+changed);
   if(fresh)say.push("новых: "+fresh);
+  if(pauses)say.push("паузы: "+pauses+" пот.");
   document.getElementById("n").textContent=say.join(", ")||"правок нет";
-  return changed+fresh;
+  return changed+fresh+pauses;
 }
 
 function after(){ render(); panel(); if(!drag)focusRow(); }
@@ -365,7 +414,7 @@ function room(){
    под неё: правишь курс и сразу его видишь. */
 function focusRow(){
   room();
-  var row=document.querySelector(".tn.sel");
+  var row=document.querySelector(".tn.sel")||document.querySelector(".tskip.sel");
   if(!row)return;
   var top=document.getElementById("panel").getBoundingClientRect().height+10;
   var r=row.getBoundingClientRect();
@@ -373,10 +422,34 @@ function focusRow(){
     window.scrollBy({top:r.top-top,behavior:"smooth"});
 }
 
+function show(cls,on){
+  Array.prototype.forEach.call(document.querySelectorAll("."+cls),function(el){
+    el.style.display=on?"":"none";
+  });
+}
+
 function panel(){
-  var box=document.getElementById("panel"), c=sel&&find(sel);
+  var box=document.getElementById("panel");
+  if(selP){
+    var p=pauseRun(selP.stream,selP.from);
+    box.className="panel";
+    show("courseonly",false); show("slotonly",false); show("pauseonly",true);
+    document.getElementById("drop").className="off";
+    document.getElementById("dropause").className="";
+    document.getElementById("p-title").textContent="пауза";
+    document.getElementById("p-where").textContent=
+      (streams.filter(function(x){return x.id===p.stream;})[0]||{}).name||p.stream;
+    document.getElementById("f-why").value=p.why;
+    document.getElementById("f-plen").textContent=p.len;
+    document.getElementById("f-pstart").textContent=fmt(D(p.from));
+    room();
+    return;
+  }
+  var c=sel&&find(sel);
   if(!c){box.className="panel off";room();return;}
   box.className="panel";
+  show("pauseonly",false); show("courseonly",true);
+  document.getElementById("dropause").className="off";
   document.getElementById("p-title").textContent=c.isNew?"новый курс":"курс";
   document.getElementById("p-where").textContent=c.streamName+" · "+c.group;
   document.getElementById("drop").className=c.isNew?"":"off";
@@ -389,9 +462,7 @@ function panel(){
 
   /* Ряд — поток, группа и день недели. Менять его можно только у курса, который
      ещё не отправлен: у заведённого это переезд, а бот его не умеет. */
-  Array.prototype.forEach.call(document.querySelectorAll(".slotonly"),function(el){
-    el.style.display=c.isNew?"":"none";
-  });
+  show("slotonly",c.isNew);
   if(c.isNew){
     document.getElementById("f-group").value=c.group;
     document.getElementById("f-stream").innerHTML=streams.map(function(st){
@@ -412,6 +483,13 @@ function fillTeachers(){
     out.sort().map(function(t){return '<option value="'+esc(t)+'">';}).join("");
 }
 
+document.getElementById("f-why").addEventListener("input",function(){
+  if(!selP)return;
+  var p=pauseRun(selP.stream,selP.from);
+  setPause(p,p.from,p.len,this.value||"нет занятий");
+  render(); countChanges();
+});
+
 ["f-name","f-teacher","f-time","f-dur","f-group"].forEach(function(id){
   document.getElementById(id).addEventListener("input",function(){
     var c=sel&&find(sel); if(!c)return;
@@ -426,6 +504,16 @@ function fillTeachers(){
 });
 
 document.getElementById("panel").addEventListener("click",function(ev){
+  if(selP){
+    var p=pauseRun(selP.stream,selP.from);
+    var pn=ev.target.getAttribute("data-pn"), pwk=ev.target.getAttribute("data-pw");
+    if(pn){
+      var len=Math.max(1,Math.min(12,p.len+ +pn));
+      setPause(p,p.from,len,p.why); after();
+    }
+    if(pwk){setPause(p,iso(addD(D(p.from),+pwk*7)),p.len,p.why); after();}
+    return;
+  }
   var c=sel&&find(sel); if(!c)return;
   var n=ev.target.getAttribute("data-n"), w=ev.target.getAttribute("data-w");
   var st=ev.target.getAttribute("data-stream"), wd=ev.target.getAttribute("data-wd");
@@ -439,7 +527,29 @@ document.getElementById("panel").addEventListener("click",function(ev){
     c.start=iso(addD(monday(D(c.start)),+wd)); after();
   }
 });
-document.getElementById("close").addEventListener("click",function(){sel=null;render();panel();});
+document.getElementById("close").addEventListener("click",function(){
+  sel=null; selP=null; render(); panel();
+});
+
+/* Пауза ставится на текущую неделю первого потока, дальше правится в панели:
+   отдельного выбора «куда» не нужно, его видно и меняется там же. */
+document.getElementById("addpause").addEventListener("click",function(){
+  var st=(selP&&selP.stream)||(sel&&find(sel)&&find(sel).stream)||(streams[0]||{}).id;
+  if(!st)return;
+  var w=iso(monday(new Date()));
+  if(!skips[st][w])skips[st][w]="нет занятий";
+  sel=null; selP={stream:st, from:w};
+  after();
+  document.getElementById("f-why").focus();
+  document.getElementById("f-why").select();
+});
+
+document.getElementById("dropause").addEventListener("click",function(){
+  if(!selP)return;
+  var p=pauseRun(selP.stream,selP.from);
+  for(var i=0;i<p.len;i++)delete skips[p.stream][iso(addD(D(p.from),i*7))];
+  selP=null; after();
+});
 
 /* ---- выбор и перетаскивание --------------------------------------------- */
 
@@ -449,8 +559,16 @@ function colWidth(){
 }
 
 document.getElementById("view").addEventListener("pointerdown",function(ev){
+  var pause=ev.target.closest?ev.target.closest("[data-skip]"):null;
+  if(pause){
+    var parts=pause.getAttribute("data-skip").split("|");
+    sel=null; selP={stream:parts[0], from:pauseRun(parts[0],parts[1]).from};
+    render(); panel(); focusRow();
+    return;
+  }
   var el=ev.target.closest?ev.target.closest("[data-key]"):null;
   if(!el)return;
+  selP=null;
   var c=find(el.getAttribute("data-key")); if(!c)return;
   var was=sel; sel=c.key; render(); panel();
   if(was!==sel)focusRow();
@@ -529,7 +647,7 @@ function payload(){
     var d=diffOf(c);
     if(Object.keys(d).length){d.id=c.key;edit.push(d);}
   });
-  return {v:1, edit:edit, add:add};
+  return {v:1, edit:edit, add:add, skips:skipDiff()};
 }
 
 document.getElementById("send").addEventListener("click",function(){
@@ -544,6 +662,8 @@ document.getElementById("send").addEventListener("click",function(){
 });
 
 document.getElementById("reset").addEventListener("click",function(){
+  skips=JSON.parse(JSON.stringify(skipsWas));
+  selP=null;
   courses=courses.filter(function(c){return !c.isNew;});
   courses.forEach(function(c){
     c.name=c.was.name;c.teacher=c.was.teacher;c.time=c.was.time;
