@@ -233,11 +233,38 @@ function pauseRun(stream,monday){
   var len=Math.round((D(to)-D(from))/(7*86400000))+1;
   return {stream:stream, from:from, len:len, why:why};
 }
+/* Недели паузы в модели различаются только датой и причиной, поэтому две
+   соседние с одной причиной — это уже одна пауза. Значит наезжать на чужую
+   нельзя: она молча срастётся с нашей, и человек получит не то, что двигал. */
+function busy(stream,from,len,mine,why){
+  function ours(w){
+    if(!mine||mine.stream!==stream)return false;
+    var off=Math.round((D(w)-D(mine.from))/(7*86400000));
+    return off>=0&&off<mine.len;
+  }
+  for(var i=0;i<len;i++){
+    var w=iso(addD(D(from),i*7));
+    if(skips[stream][w]!==undefined&&!ours(w))return w;
+  }
+  /* Соседство — это уже слияние: пауза на смежной неделе с той же причиной
+     станет с нашей одним блоком, и человек получит не то, что двигал. */
+  var near=[iso(addD(D(from),-7)), iso(addD(D(from),len*7))];
+  for(i=0;i<2;i++)
+    if(skips[stream][near[i]]===why&&!ours(near[i]))return near[i];
+  return null;
+}
+
 function setPause(p,from,len,why){
   var old=pauseRun(p.stream,p.from);
   for(var i=0;i<old.len;i++)delete skips[p.stream][iso(addD(D(old.from),i*7))];
   for(i=0;i<len;i++)skips[p.stream][iso(addD(D(from),i*7))]=why;
   selP={stream:p.stream, from:from};
+}
+
+function refuse(week){
+  document.getElementById("err").textContent =
+    "Рядом, с "+fmt(D(week))+", уже есть пауза с той же причиной — она слилась бы "+
+    "с этой в одну. Уберите её, измените причину или растяните эту кнопкой «недель».";
 }
 
 /* Недели, которые занимает курс: шаг в неделю, пропущенные недели потока
@@ -548,7 +575,7 @@ function groupsKnown(){
 document.getElementById("f-why").addEventListener("input",function(){
   if(!selP)return;
   var p=pauseRun(selP.stream,selP.from);
-  setPause(p,p.from,p.len,this.value||"нет занятий");
+  setPause(p,p.from,p.len,this.value||"очные сборы");
   render(); countChanges();
 });
 
@@ -575,13 +602,25 @@ document.getElementById("panel").addEventListener("click",function(ev){
     var pn=ev.target.getAttribute("data-pn"), pwk=ev.target.getAttribute("data-pw");
     if(pn){
       var len=Math.max(1,Math.min(12,p.len+ +pn));
+      var hit=busy(p.stream,p.from,len,p,p.why);
+      if(hit){refuse(hit);return;}
+      document.getElementById("err").textContent="";
       setPause(p,p.from,len,p.why); after();
     }
-    if(pwk){setPause(p,iso(addD(D(p.from),+pwk*7)),p.len,p.why); after();}
+    if(pwk){
+      var from=iso(addD(D(p.from),+pwk*7));
+      var hit2=busy(p.stream,from,p.len,p,p.why);
+      if(hit2){refuse(hit2);return;}
+      document.getElementById("err").textContent="";
+      setPause(p,from,p.len,p.why); after();
+    }
     var pst=ev.target.getAttribute("data-pstream");
     if(pst&&pst!==p.stream){
       /* Пауза переезжает в другой поток теми же неделями: снимаем со старого,
          ставим на новый. Занятия обоих потоков пересчитает бот. */
+      var hit3=busy(pst,p.from,p.len,null,p.why);
+      if(hit3){refuse(hit3);return;}
+      document.getElementById("err").textContent="";
       for(var i=0;i<p.len;i++)delete skips[p.stream][iso(addD(D(p.from),i*7))];
       for(i=0;i<p.len;i++)skips[pst][iso(addD(D(p.from),i*7))]=p.why;
       selP={stream:pst, from:p.from};
@@ -647,7 +686,8 @@ document.getElementById("addpause").addEventListener("click",function(){
   var st=(selP&&selP.stream)||(sel&&find(sel)&&find(sel).stream)||(streams[0]||{}).id;
   if(!st)return;
   var w=iso(monday(new Date()));
-  if(!skips[st][w])skips[st][w]="нет занятий";
+  while(busy(st,w,1,null,"очные сборы"))w=iso(addD(D(w),7));   /* ищем свободную неделю */
+  skips[st][w]="очные сборы";
   sel=null; selP={stream:st, from:w};
   after();
   document.getElementById("f-why").focus();
