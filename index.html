@@ -250,7 +250,29 @@ function fmt(d){return ("0"+d.getUTCDate()).slice(-2)+"."+("0"+(d.getUTCMonth()+
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){
   return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
 /* дата берётся по местному календарю: иначе ночью неделя съезжает на предыдущую */
-function today(){var n=new Date();return new Date(Date.UTC(n.getFullYear(),n.getMonth(),n.getDate()));}
+/* Расписание московское, а смотрят на него откуда угодно. Поэтому «сегодня» и
+   часы считаем в зоне расписания: у человека из другого города иначе съедет и
+   выделение текущего дня, и граница «занятие прошло». Зону присылает бот в
+   schedule.js — она там же, где остальные настройки, а не вкопана сюда. */
+var TZ_DEFAULT="Europe/Moscow",_tz=null,_tzFmt=null;
+function zoneParts(){
+  var z=(data&&data.tz)||TZ_DEFAULT;
+  if(_tz!==z){
+    _tz=z;
+    try{
+      _tzFmt=new Intl.DateTimeFormat("en-CA",{timeZone:z,year:"numeric",month:"2-digit",
+        day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false});
+    }catch(e){_tzFmt=null;}   /* зона не понята — считаем по местным часам */
+  }
+  var n=new Date();
+  if(!_tzFmt)return {year:n.getFullYear(),month:("0"+(n.getMonth()+1)).slice(-2),
+                     day:("0"+n.getDate()).slice(-2),hour:n.getHours(),minute:n.getMinutes()};
+  var o={};
+  _tzFmt.formatToParts(n).forEach(function(p){o[p.type]=p.value;});
+  return o;
+}
+function today(){var p=zoneParts();return D(p.year+"-"+p.month+"-"+p.day);}
+function nowMin(){var p=zoneParts();return ((+p.hour)%24)*60+(+p.minute);}
 function curWeek(){return iso(monday(today()));}
 function mins(t){var p=String(t).split(":");return (+p[0])*60+(+p[1]||0);}
 function hm(m){return Math.floor(m/60)+":"+("0"+m%60).slice(-2);}
@@ -291,8 +313,7 @@ function passed(o){
   var day=iso(o.date),tk=iso(today());
   if(day<tk)return true;
   if(day>tk||o.tbd||!o.time)return false;
-  var n=new Date();
-  return n.getHours()*60+n.getMinutes()>=mins(o.time)+dur(o);
+  return nowMin()>=mins(o.time)+dur(o);
 }
 
 function occurrences(s,st,sk){
