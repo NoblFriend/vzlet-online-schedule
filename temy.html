@@ -178,7 +178,7 @@ function load(){
     return {block:b.block,group:b.group,subj:b.subj||"",
             anchor:(b.topics[0]||{}).id,
             items:(b.topics||[]).map(function(t){
-              return {id:t.id,title:t.t||"",desc:t.d||"",when:t.w||"",gone:false,
+              return {id:t.id,title:t.t||"",desc:t.d||"",gone:false,
                       was:{title:t.t||"",desc:t.d||""}};
             })};
   });
@@ -220,11 +220,15 @@ function render(){
              (dirtyGroup(g)?" ·":"")+"</button>";
     }).join("")+"</div>";
 
+  /* дата — не свойство темы, а место в очереди: N-я тема группы приходится на
+     N-е занятие. Поэтому считаем её заново после каждой перестановки. */
+  var days=(data.days||{})[group]||[], seq=0;
   var out=blocks.map(function(b,bi){
     if(b.group!==group)return "";
     var c=SUBJ[b.subj]||6, n=0;
     var rows=b.items.map(function(it,ii){
       if(!it.gone)n++;
+      it.when=it.gone?"":(days[seq++]||"");
       return card(b,bi,it,ii,n,!!(open&&open.b===bi&&open.i===ii));
     }).join("");
     return '<section class="bl" style="--acc:var(--c'+c+'m);--soft:var(--c'+c+'b)">'+
@@ -398,18 +402,17 @@ load_data().then(function(got){
   data=got;
   if(!(data&&data.blocks&&data.blocks.length))throw new Error("пусто");
   ro=data.can===0;
+  load();
+  var dated=Object.keys(data.days||{}).length>0;
   if(ro){
     document.body.classList.add("ro");
     document.querySelector(".foot").style.display="none";
-    document.getElementById("hint").textContent=
-      "Программа другого потока: посмотреть можно, править — нет. "+
-      "Дата у темы — по порядку: N-я тема приходится на N-е занятие.";
-  }else{
-    document.getElementById("hint").textContent=
-      "Нажмите тему — можно переписать название и описание, поменять порядок или убрать её. "+
-      "Дата — по порядку: N-я тема приходится на N-е занятие.";
   }
-  load(); render();
+  document.getElementById("hint").textContent=
+    (ro?"Программа другого потока: посмотреть можно, править — нет."
+       :"Нажмите тему — можно переписать название и описание, поменять порядок или убрать её.")+
+    (dated?" Дата — по порядку: N-я тема приходится на N-е занятие.":"");
+  render();
 },function(err){
   fail(String(err.message)==="старый вебвью"
     ? "Программа не открылась: обновите телеграм — эта версия не умеет её разжать."
