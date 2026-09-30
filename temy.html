@@ -39,13 +39,21 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
 .sub{color:var(--fg2);font-size:13px;margin:0 0 4px}
 .hint{font-size:11px;color:var(--fg3);margin:0 0 16px}
 
+/* переключатель групп — тот же, что на сайте */
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 16px}
+.bar:empty{margin:0}
+.seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:2px}
+.seg button{-webkit-user-select:none;user-select:none;border:0;background:transparent;color:var(--fg2);
+  font-family:inherit;font-size:13px;padding:5px 11px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:var(--bg);color:var(--fg);font-weight:600;box-shadow:var(--sh)}
+
 /* блок каталога */
 .bl{margin:0 0 22px}
 .bh{display:flex;align-items:baseline;gap:8px;margin:0 0 8px;padding:0 2px}
 .bh b{font-size:15px;font-weight:600}
 .bh .gr{font-size:12px;color:var(--fg2)}
 .bh .n{font-size:12px;color:var(--fg3);margin-left:auto}
-.bar{height:3px;border-radius:2px;background:var(--acc);margin:0 0 10px}
+.line{height:3px;border-radius:2px;background:var(--acc);margin:0 0 10px}
 
 /* тема */
 .tp{display:flex;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;
@@ -56,6 +64,10 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
   font-variant-numeric:tabular-nums;color:var(--fg);margin-top:1px}
 .tp .bd{flex:1;min-width:0}
 .tp .ti{font-weight:600;font-size:14px;line-height:1.3}
+/* дата — не привязка, а совпадение порядка, поэтому она приглушена */
+.tp .w{float:right;margin:0 0 0 8px;font-size:11px;color:var(--fg2);background:var(--soft);
+  border-radius:6px;padding:1px 7px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ro .tp{cursor:default}
 .tp .td{font-size:12px;color:var(--fg2);margin-top:2px;white-space:pre-wrap}
 .tp.gone{opacity:.5}
 .tp.gone .ti{text-decoration:line-through}
@@ -88,8 +100,9 @@ button.warn{color:var(--danger)}
 <div class="wrap">
   <h1>Программа курсов</h1>
   <p class="sub" id="who">загрузка…</p>
-  <p class="hint">Нажмите тему — можно переписать название и описание, поменять порядок или
-     убрать её. Что получилось, бот покажет перед тем, как применить.</p>
+  <p class="hint" id="hint">Нажмите тему — можно переписать название и описание, поменять
+     порядок или убрать её. Что получилось, бот покажет перед тем, как применить.</p>
+  <div class="bar" id="bar"></div>
   <div id="view"></div>
   <p class="err" id="err"></p>
 </div>
@@ -150,16 +163,27 @@ function load_data(){
 var SUBJ={astro:1,sferka:2,nebmeh:3,optics:4,prac:5};
 var data=null;
 var blocks=[];
+var group=null;   // какая группа открыта: классы листаются вкладками, как на сайте
+var ro=false;     // чужой поток отдаётся только на чтение
+
+function rank(g){var m=String(g).match(/\d+/);return m?+m[0]:99;}
+function groupsOf(){
+  var out=[];
+  blocks.forEach(function(b){if(out.indexOf(b.group)<0)out.push(b.group);});
+  return out.sort(function(a,b){return rank(a)-rank(b);});
+}
 
 function load(){
   blocks=(data.blocks||[]).map(function(b){
     return {block:b.block,group:b.group,subj:b.subj||"",
             anchor:(b.topics[0]||{}).id,
             items:(b.topics||[]).map(function(t){
-              return {id:t.id,title:t.t||"",desc:t.d||"",gone:false,
+              return {id:t.id,title:t.t||"",desc:t.d||"",when:t.w||"",gone:false,
                       was:{title:t.t||"",desc:t.d||""}};
             })};
   });
+  var all=groupsOf();
+  if(all.indexOf(group)<0)group=all[0];
 }
 
 /* ---- что изменилось ----------------------------------------------------- */
@@ -189,18 +213,25 @@ var open=null;   // {b:индекс блока, i:индекс темы}
 
 function render(){
   document.getElementById("who").textContent=data.who||"";
+  var all=groupsOf();
+  document.getElementById("bar").innerHTML=all.length<2?"":
+    '<div class="seg">'+all.map(function(g){
+      return '<button'+(g===group?' class="on"':"")+' data-g="'+esc(g)+'">'+esc(g)+
+             (dirtyGroup(g)?" ·":"")+"</button>";
+    }).join("")+"</div>";
+
   var out=blocks.map(function(b,bi){
+    if(b.group!==group)return "";
     var c=SUBJ[b.subj]||6, n=0;
     var rows=b.items.map(function(it,ii){
       if(!it.gone)n++;
-      if(open&&open.b===bi&&open.i===ii)return card(b,bi,it,ii,n,true);
-      return card(b,bi,it,ii,n,false);
+      return card(b,bi,it,ii,n,!!(open&&open.b===bi&&open.i===ii));
     }).join("");
     return '<section class="bl" style="--acc:var(--c'+c+'m);--soft:var(--c'+c+'b)">'+
-      '<div class="bh"><b>'+esc(b.block)+'</b><span class="gr">'+esc(b.group)+'</span>'+
+      '<div class="bh"><b>'+esc(b.block)+'</b>'+
       '<span class="n">'+n+(changed(b)?' · правится':'')+'</span></div>'+
-      '<div class="bar"></div>'+rows+
-      '<button class="addt" data-add="'+bi+'">+ тема</button></section>';
+      '<div class="line"></div>'+rows+
+      (ro?"":'<button class="addt" data-add="'+bi+'">+ тема</button>')+'</section>';
   }).join("");
   document.getElementById("view").innerHTML=out;
   var c=count();
@@ -210,12 +241,23 @@ function render(){
   if(open)document.querySelectorAll(".tp.edit textarea").forEach(grow);
 }
 
+/* правки в другой вкладке не должны пропадать из виду */
+function dirtyGroup(g){
+  return blocks.some(function(b){return b.group===g&&changed(b);});
+}
+
+document.getElementById("bar").addEventListener("click",function(ev){
+  if(!ev.target.dataset.g)return;
+  keep(); open=null; group=ev.target.dataset.g; render();
+});
+
 function card(b,bi,it,ii,n,editing){
   var num=it.gone?"−":String(n);
   var head='<span class="num">'+num+'</span>';
   if(!editing){
     return '<div class="tp'+(it.gone?" gone":"")+(dirty(it)?" dirty":"")+
       '" data-b="'+bi+'" data-i="'+ii+'">'+head+'<div class="bd">'+
+      (it.when&&!it.gone?'<span class="w">'+esc(it.when)+'</span>':'')+
       '<div class="ti">'+esc(it.title||"без названия")+'</div>'+
       (it.desc?'<div class="td">'+esc(it.desc)+'</div>':'')+
       '</div></div>';
@@ -281,7 +323,7 @@ document.getElementById("view").addEventListener("click",function(ev){
   }
   if(t.dataset.back){keep();it.gone=false;open=null;render();return;}
   if(t.dataset.done){keep();open=null;render();return;}
-  if(box.classList.contains("edit"))return;      // клик внутри полей ввода
+  if(box.classList.contains("edit")||ro)return;  // клик внутри полей ввода
   keep();
   open={b:bi,i:ii};
   render();
@@ -355,6 +397,18 @@ function fail(why){
 load_data().then(function(got){
   data=got;
   if(!(data&&data.blocks&&data.blocks.length))throw new Error("пусто");
+  ro=data.can===0;
+  if(ro){
+    document.body.classList.add("ro");
+    document.querySelector(".foot").style.display="none";
+    document.getElementById("hint").textContent=
+      "Программа другого потока: посмотреть можно, править — нет. "+
+      "Дата у темы — по порядку: N-я тема приходится на N-е занятие.";
+  }else{
+    document.getElementById("hint").textContent=
+      "Нажмите тему — можно переписать название и описание, поменять порядок или убрать её. "+
+      "Дата — по порядку: N-я тема приходится на N-е занятие.";
+  }
   load(); render();
 },function(err){
   fail(String(err.message)==="старый вебвью"
