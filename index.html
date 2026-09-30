@@ -151,7 +151,7 @@ body.shot .nav{margin-left:0}
 .rcourse{margin:0 0 14px}
 .rname{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;margin:0 0 5px}
 .rname::before{content:"";width:10px;height:10px;border-radius:3px;background:var(--rc)}
-.rrow{display:flex;align-items:baseline;gap:10px;padding:7px 10px;border-radius:7px;
+.rrow{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;padding:7px 10px;border-radius:7px;
   border:1px solid var(--line);text-decoration:none;color:inherit;font-size:13px}
 .rrow+.rrow{margin-top:4px}
 @media (hover:hover){a.rrow:hover{background:var(--panel);border-color:var(--line2)}}
@@ -161,6 +161,10 @@ body.shot .nav{margin-left:0}
 /* преподаватель занимает остаток строки и сжимается первым */
 .rwho{flex:1;min-width:0;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rgo{margin-left:auto;font-weight:600;white-space:nowrap}
+/* тема занятия: чем оно было, а не когда. Второй строкой, потому что бывает длинной */
+.rtopic{flex-basis:100%;color:var(--fg2);font-size:12px;line-height:1.35;
+  padding-left:calc(1.6em + 10px)}
+.rrow.off .rtopic{color:var(--fg3)}
 .rrow.off .rgo{font-weight:400}
 @media (max-width:420px){.rwho{display:none}}
 
@@ -322,7 +326,7 @@ function occurrences(s,st,sk){
     if(!sk[iso(monday(d))]){
       var idx=out.length+1,o=om[s.id+"#"+idx];
       var it={idx:idx,date:d,time:s.time||"",teacher:s.teacher||"",series:s,st:st,
-              tbd:!s.time,moved:false,cancel:false,note:"",sub:false,
+              tbd:!s.time,moved:false,cancel:false,note:"",topic:"",sub:false,
               orig:d,origTime:s.time||"",origTeacher:s.teacher||""};
       if(o){
         if(o.date){it.date=D(o.date);it.moved=true;}
@@ -330,6 +334,7 @@ function occurrences(s,st,sk){
         if(o.teacher&&o.teacher!==s.teacher){it.teacher=o.teacher;it.sub=true;}
         if(o.cancel){it.cancel=true;}
         it.note=o.note||"";
+        it.topic=o.topic||"";
       }
       out.push(it);
     }
@@ -720,10 +725,11 @@ function recsHtml(){
         var when=WDS[wdIdx(o.date)]+" "+fmt(o.date)+(o.tbd?"":" "+esc(o.time));
         var inner='<span class="rnum">'+o.pos+'</span><span class="rwhen">'+when+"</span>"+
                   '<span class="rwho">'+esc(o.teacher||"")+"</span>";
+        var topic=o.topic?'<span class="rtopic">'+esc(o.topic)+"</span>":"";
         h+=p&&p.rec
           ? '<a class="rrow" href="'+esc(p.post)+'" target="_blank" rel="noopener">'+
-            inner+'<span class="rgo">запись</span></a>'
-          : '<div class="rrow off">'+inner+'<span class="rgo">ещё нет</span></div>';
+            inner+'<span class="rgo">запись</span>'+topic+"</a>"
+          : '<div class="rrow off">'+inner+'<span class="rgo">ещё нет</span>'+topic+"</div>";
       });
       h+="</div>";
     });

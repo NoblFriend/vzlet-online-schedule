@@ -71,6 +71,8 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
 .tp.gone{opacity:.5}
 .tp.gone .ti{text-decoration:line-through}
 .tp.edit{border-color:var(--line2);box-shadow:var(--sh);cursor:default;background:var(--panel)}
+.ro .tp{cursor:default}
+.ro .tp:active{background:var(--bg)}
 .tp.dirty .num{background:var(--acc)}
 
 textarea{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line2);
@@ -163,6 +165,7 @@ var SUBJ={astro:1,sferka:2,nebmeh:3,optics:4,prac:5};
 var data=null;
 var blocks=[];
 var group=null;   // какая группа открыта: классы листаются вкладками, как на сайте
+var ro=false;     // программу задаёт школа: преподаватель её читает, а правит админ
 
 function rank(g){var m=String(g).match(/\d+/);return m?+m[0]:99;}
 function groupsOf(){
@@ -233,7 +236,7 @@ function render(){
       '<div class="bh"><b>'+esc(b.block)+'</b>'+
       '<span class="n">'+n+(changed(b)?' · правится':'')+'</span></div>'+
       '<div class="line"></div>'+rows+
-      '<button class="addt" data-add="'+bi+'">+ тема</button></section>';
+      (ro?"":'<button class="addt" data-add="'+bi+'">+ тема</button>')+'</section>';
   }).join("");
   document.getElementById("view").innerHTML=out;
   var c=count();
@@ -325,7 +328,7 @@ document.getElementById("view").addEventListener("click",function(ev){
   }
   if(t.dataset.back){keep();it.gone=false;open=null;render();return;}
   if(t.dataset.done){keep();open=null;render();return;}
-  if(box.classList.contains("edit"))return;      // клик внутри полей ввода
+  if(box.classList.contains("edit")||ro)return;  // клик внутри полей ввода
   keep();
   open={b:bi,i:ii};
   render();
@@ -399,9 +402,15 @@ function fail(why){
 load_data().then(function(got){
   data=got;
   if(!(data&&data.blocks&&data.blocks.length))throw new Error("пусто");
+  ro=data.can===0;
+  if(ro){
+    document.body.classList.add("ro");
+    document.querySelector(".foot").style.display="none";
+  }
   load();
   document.getElementById("hint").textContent=
-    "Нажмите тему — можно переписать название и описание, поменять порядок или убрать её."+
+    (ro?"Программу курса задаёт школа: здесь её видно, но не правят."
+       :"Нажмите тему — можно переписать название и описание, поменять порядок или убрать её.")+
     (Object.keys(data.days||{}).length
       ? " Дата — по порядку: N-я тема приходится на N-е занятие." : "");
   render();
