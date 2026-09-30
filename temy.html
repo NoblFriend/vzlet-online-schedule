@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Программа курсов</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+/* Переменные те же, что в index.html и editor.html: страница должна выглядеть
+   продолжением сайта, а не отдельной программой. */
+:root{
+  --bg:#ffffff;--fg:#1b1b1a;--fg2:#6b6b66;--fg3:#96968f;
+  --line:#e4e4de;--line2:#c8c8c0;--panel:#f1f1ec;--danger:#8c2b2b;
+  --sh:0 1px 2px rgba(0,0,0,.10);
+  --c1b:#c9daf8;--c1m:#a4c2f4;
+  --c2b:#d9ead3;--c2m:#b6d7a8;
+  --c3b:#f4cccc;--c3m:#ea9999;
+  --c4b:#d9d2e9;--c4m:#b4a7d6;
+  --c5b:#ead1dc;--c5m:#d5a6bd;
+  --c6b:#f1f1ec;--c6m:#e4e4de;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#1a1a18;--fg:#eceae6;--fg2:#a2a29a;--fg3:#78786f;
+  --line:#32322e;--line2:#4a4a44;--panel:#232320;--danger:#e08b8b;
+  --sh:0 1px 2px rgba(0,0,0,.40);
+  --c1b:#12233f;--c1m:#a4c2f4;
+  --c2b:#25331e;--c2m:#b6d7a8;
+  --c3b:#3c1616;--c3m:#ea9999;
+  --c4b:#241e33;--c4m:#b4a7d6;
+  --c5b:#331f29;--c5m:#d5a6bd;
+  --c6b:#2c2c26;--c6m:#e4e4de;
+}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
+.wrap{max-width:760px;margin:0 auto;padding:16px 14px 76px}
+h1{font-size:19px;font-weight:600;margin:0 0 2px}
+.sub{color:var(--fg2);font-size:13px;margin:0 0 4px}
+.hint{font-size:11px;color:var(--fg3);margin:0 0 16px}
+
+/* блок каталога */
+.bl{margin:0 0 22px}
+.bh{display:flex;align-items:baseline;gap:8px;margin:0 0 8px;padding:0 2px}
+.bh b{font-size:15px;font-weight:600}
+.bh .gr{font-size:12px;color:var(--fg2)}
+.bh .n{font-size:12px;color:var(--fg3);margin-left:auto}
+.bar{height:3px;border-radius:2px;background:var(--acc);margin:0 0 10px}
+
+/* тема */
+.tp{display:flex;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;
+    margin:0 0 6px;background:var(--bg);cursor:pointer}
+.tp:active{background:var(--panel)}
+.tp .num{flex:none;width:22px;height:22px;border-radius:11px;background:var(--soft);
+  font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;
+  font-variant-numeric:tabular-nums;color:var(--fg);margin-top:1px}
+.tp .bd{flex:1;min-width:0}
+.tp .ti{font-weight:600;font-size:14px;line-height:1.3}
+.tp .td{font-size:12px;color:var(--fg2);margin-top:2px;white-space:pre-wrap}
+.tp .au{font-size:11px;color:var(--fg3);margin-top:3px}
+.tp.gone{opacity:.5}
+.tp.gone .ti{text-decoration:line-through}
+.tp.edit{border-color:var(--line2);box-shadow:var(--sh);cursor:default;background:var(--panel)}
+.tp.dirty .num{background:var(--acc)}
+
+textarea{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line2);
+  border-radius:8px;padding:7px 9px;font-family:inherit;font-size:14px;line-height:1.35;
+  resize:none;overflow:hidden;display:block}
+.ei{font-weight:600;min-height:34px}
+.ed{margin-top:6px;min-height:60px;font-size:13px}
+.acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.acts .sp{flex:1}
+button{background:var(--bg);color:var(--fg);border:1px solid var(--line2);border-radius:8px;
+  padding:6px 11px;font-family:inherit;font-size:13px;cursor:pointer;
+  -webkit-user-select:none;user-select:none;white-space:nowrap}
+button:disabled{opacity:.35}
+button.main{background:var(--fg);color:var(--bg);border-color:transparent;font-weight:600}
+button.warn{color:var(--danger)}
+.addt{width:100%;border-style:dashed;color:var(--fg2)}
+
+.foot{position:fixed;left:0;right:0;bottom:0;z-index:9;background:var(--bg);
+  border-top:1px solid var(--line);padding:9px 12px;display:flex;gap:6px;align-items:center}
+.foot .n{color:var(--fg2);font-size:12px;flex:1;min-width:0;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.err{color:var(--danger);font-size:12px;margin:10px 0 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Программа курсов</h1>
+  <p class="sub" id="who">загрузка…</p>
+  <p class="hint">Нажмите тему — можно переписать название и описание, поменять порядок или
+     убрать её. Что получилось, бот покажет перед тем, как применить.</p>
+  <div id="view"></div>
+  <p class="err" id="err"></p>
+</div>
+
+<div class="foot">
+  <span class="n" id="n">правок нет</span>
+  <button id="reset">Сброс</button>
+  <button class="main" id="send">Отправить</button>
+</div>
+
+<script>
+"use strict";
+var tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+if (tg) { tg.ready(); tg.expand(); }
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(m){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m];});}
+
+/* ---- данные приезжают в хвосте ссылки ----------------------------------- */
+/* На сайте программы нет: он публичный, а темы видят только преподаватели.
+   Бот собирает ссылку лично и кладёт программу в поле d за решёткой — такой
+   хвост не уходит ни на сервер, ни в логи. Телеграм дописывает туда своё,
+   поэтому читаем как набор полей, а не как одну строку. */
+function param(raw,name){
+  var out=null;
+  String(raw||"").split("&").forEach(function(pair){
+    var i=pair.indexOf("=");
+    if(i>0&&pair.slice(0,i)===name)out=pair.slice(i+1);
+  });
+  return out;
+}
+function unpack(s){
+  s=String(s).replace(/-/g,"+").replace(/_/g,"/");
+  while(s.length%4)s+="=";
+  var bin=atob(s),bytes=new Uint8Array(bin.length);
+  for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+  return JSON.parse(new TextDecoder("utf-8").decode(bytes));
+}
+function read(){
+  var raw=param(location.hash.replace(/^#/,""),"d")||param(location.search.replace(/^\?/,""),"d");
+  if(!raw)return null;
+  try{return unpack(raw);}catch(e){return null;}
+}
+
+var SUBJ={astro:1,sferka:2,nebmeh:3,optics:4,prac:5};
+var data=read();
+var blocks=[];
+
+function load(){
+  blocks=(data.blocks||[]).map(function(b){
+    return {block:b.block,group:b.group,subj:b.subj||"",
+            anchor:(b.topics[0]||{}).id,
+            items:(b.topics||[]).map(function(t){
+              return {id:t.id,title:t.t||"",desc:t.d||"",author:t.a||"",gone:false,
+                      was:{title:t.t||"",desc:t.d||""}};
+            })};
+  });
+}
+
+/* ---- что изменилось ----------------------------------------------------- */
+function dirty(it){
+  return it.id==null||it.gone||it.title!==it.was.title||it.desc!==it.was.desc;
+}
+function moved(b){
+  var kept=b.items.filter(function(i){return !i.gone&&i.id!=null;}).map(function(i){return i.id;});
+  var was=data.blocks[blocks.indexOf(b)].topics.map(function(t){return t.id;})
+          .filter(function(id){return kept.indexOf(id)>=0;});
+  return kept.join(",")!==was.join(",");
+}
+function changed(b){
+  return moved(b)||b.items.some(dirty);
+}
+function count(){
+  var n=0;
+  blocks.forEach(function(b){
+    if(moved(b))n++;
+    b.items.forEach(function(i){if(dirty(i))n++;});
+  });
+  return n;
+}
+
+/* ---- отрисовка ---------------------------------------------------------- */
+var open=null;   // {b:индекс блока, i:индекс темы}
+
+function render(){
+  document.getElementById("who").textContent=data.who||"";
+  var out=blocks.map(function(b,bi){
+    var c=SUBJ[b.subj]||6, n=0;
+    var rows=b.items.map(function(it,ii){
+      if(!it.gone)n++;
+      if(open&&open.b===bi&&open.i===ii)return card(b,bi,it,ii,n,true);
+      return card(b,bi,it,ii,n,false);
+    }).join("");
+    return '<section class="bl" style="--acc:var(--c'+c+'m);--soft:var(--c'+c+'b)">'+
+      '<div class="bh"><b>'+esc(b.block)+'</b><span class="gr">'+esc(b.group)+'</span>'+
+      '<span class="n">'+n+(changed(b)?' · правится':'')+'</span></div>'+
+      '<div class="bar"></div>'+rows+
+      '<button class="addt" data-add="'+bi+'">+ тема</button></section>';
+  }).join("");
+  document.getElementById("view").innerHTML=out;
+  var c=count();
+  document.getElementById("n").textContent=c?("правок "+c):"правок нет";
+  document.getElementById("send").disabled=!c;
+  document.getElementById("reset").disabled=!c;
+  if(open)document.querySelectorAll(".tp.edit textarea").forEach(grow);
+}
+
+function card(b,bi,it,ii,n,editing){
+  var num=it.gone?"−":String(n);
+  var head='<span class="num">'+num+'</span>';
+  if(!editing){
+    return '<div class="tp'+(it.gone?" gone":"")+(dirty(it)?" dirty":"")+
+      '" data-b="'+bi+'" data-i="'+ii+'">'+head+'<div class="bd">'+
+      '<div class="ti">'+esc(it.title||"без названия")+'</div>'+
+      (it.desc?'<div class="td">'+esc(it.desc)+'</div>':'')+
+      (it.author?'<div class="au">'+esc(it.author)+'</div>':'')+
+      '</div></div>';
+  }
+  var last=b.items.length-1;
+  return '<div class="tp edit" data-b="'+bi+'" data-i="'+ii+'">'+head+'<div class="bd">'+
+    '<textarea class="ei" placeholder="название темы" maxlength="120" rows="1">'+
+      esc(it.title)+'</textarea>'+
+    '<textarea class="ed" placeholder="описание: о чём занятие" maxlength="1000">'+
+      esc(it.desc)+'</textarea>'+
+    '<div class="acts">'+
+      '<button data-mv="-1"'+(ii===0?" disabled":"")+'>↑</button>'+
+      '<button data-mv="1"'+(ii===last?" disabled":"")+'>↓</button>'+
+      '<span class="sp"></span>'+
+      (it.gone?'<button data-back="1">Вернуть</button>'
+             :'<button class="warn" data-del="1">Убрать</button>')+
+      '<button class="main" data-done="1">Готово</button>'+
+    '</div></div></div>';
+}
+
+function grow(ta){ta.style.height="auto";ta.style.height=(ta.scrollHeight+2)+"px";}
+
+/* правку запоминаем перед каждой перерисовкой: иначе набранное пропадёт */
+function keep(){
+  if(!open)return;
+  var box=document.querySelector(".tp.edit");
+  if(!box)return;
+  var it=blocks[open.b].items[open.i];
+  it.title=box.querySelector(".ei").value;
+  it.desc=box.querySelector(".ed").value;
+}
+
+document.getElementById("view").addEventListener("click",function(ev){
+  var t=ev.target;
+  if(t.dataset.add!==undefined&&t.dataset.add!==""){
+    keep();
+    var b=blocks[+t.dataset.add];
+    b.items.push({id:null,title:"",desc:"",author:"",gone:false,was:{title:"",desc:""}});
+    open={b:+t.dataset.add,i:b.items.length-1};
+    render();
+    var box=document.querySelector(".tp.edit .ei");
+    if(box)box.focus();
+    return;
+  }
+  var box=t.closest?t.closest(".tp"):null;
+  if(!box)return;
+  var bi=+box.dataset.b, ii=+box.dataset.i, b=blocks[bi], it=b.items[ii];
+
+  if(t.dataset.mv){
+    keep();
+    var to=ii+ +t.dataset.mv;
+    if(to<0||to>=b.items.length)return;
+    b.items.splice(to,0,b.items.splice(ii,1)[0]);
+    open={b:bi,i:to};
+    render();
+    return;
+  }
+  if(t.dataset.del){
+    keep();
+    if(it.id==null)b.items.splice(ii,1);         // добавленную убираем совсем
+    else it.gone=true;
+    open=null; render(); return;
+  }
+  if(t.dataset.back){keep();it.gone=false;open=null;render();return;}
+  if(t.dataset.done){keep();open=null;render();return;}
+  if(box.classList.contains("edit"))return;      // клик внутри полей ввода
+  keep();
+  open={b:bi,i:ii};
+  render();
+  var first=document.querySelector(".tp.edit .ei");
+  if(first&&!it.title)first.focus();
+});
+
+document.getElementById("view").addEventListener("keydown",function(ev){
+  if(ev.key==="Enter"&&ev.target.classList.contains("ei"))ev.preventDefault();
+});
+
+document.getElementById("view").addEventListener("input",function(ev){
+  if(ev.target.tagName==="TEXTAREA")grow(ev.target);
+  keep();
+  var c=count();
+  document.getElementById("n").textContent=c?("правок "+c):"правок нет";
+  document.getElementById("send").disabled=!c;
+  document.getElementById("reset").disabled=!c;
+});
+
+/* ---- отправка ----------------------------------------------------------- */
+function payload(){
+  var out=[];
+  blocks.forEach(function(b){
+    if(!changed(b))return;
+    var list=[];
+    b.items.forEach(function(it){
+      if(it.gone)return;
+      if(it.id==null){list.push({title:it.title.trim(),desc:it.desc.trim()});return;}
+      var one={id:it.id};
+      if(it.title!==it.was.title)one.title=it.title.trim();
+      if(it.desc!==it.was.desc)one.desc=it.desc.trim();
+      list.push(one);
+    });
+    out.push({"in":b.anchor,list:list});
+  });
+  return {v:1,kind:"temy",blocks:out};
+}
+
+document.getElementById("send").addEventListener("click",function(){
+  keep();
+  var err=document.getElementById("err");
+  if(!count()){err.textContent="Нечего отправлять: правок нет.";return;}
+  var empty=false, wiped=false;
+  blocks.forEach(function(b){
+    if(!changed(b))return;
+    if(!b.items.filter(function(i){return !i.gone;}).length)wiped=true;
+    b.items.forEach(function(i){if(!i.gone&&!i.title.trim())empty=true;});
+  });
+  if(empty){err.textContent="У темы не задано название.";return;}
+  if(wiped){err.textContent="Нельзя убрать из блока все темы.";return;}
+  var body=JSON.stringify(payload());
+  if(body.length>4000){err.textContent="Слишком много правок за раз, отправьте частями.";return;}
+  err.textContent="";
+  if(tg)tg.sendData(body); else alert(body);
+});
+
+document.getElementById("reset").addEventListener("click",function(){
+  open=null; load(); render();
+  document.getElementById("err").textContent="";
+});
+
+/* ---- старт -------------------------------------------------------------- */
+if(data&&data.blocks&&data.blocks.length){load();render();}
+else{
+  document.getElementById("who").textContent="";
+  document.getElementById("err").textContent=
+    "Программа не приехала: откройте страницу кнопкой в боте, командой /temy.";
+  document.getElementById("send").disabled=true;
+  document.getElementById("reset").disabled=true;
+}
+</script>
+</body>
+</html>
