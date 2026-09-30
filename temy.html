@@ -122,21 +122,34 @@ function param(raw,name){
   });
   return out;
 }
-function unpack(s){
+function bytesOf(s){
   s=String(s).replace(/-/g,"+").replace(/_/g,"/");
   while(s.length%4)s+="=";
-  var bin=atob(s),bytes=new Uint8Array(bin.length);
-  for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
-  return JSON.parse(new TextDecoder("utf-8").decode(bytes));
+  var bin=atob(s),out=new Uint8Array(bin.length);
+  for(var i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);
+  return out;
 }
-function read(){
-  var raw=param(location.hash.replace(/^#/,""),"d")||param(location.search.replace(/^\?/,""),"d");
-  if(!raw)return null;
-  try{return unpack(raw);}catch(e){return null;}
+function field(name){
+  var hash=location.hash.replace(/^#/,""),query=location.search.replace(/^\?/,"");
+  return param(hash,name)||param(query,name);
+}
+/* Большая программа не влезает в кнопку телеграма, поэтому бот её жмёт: поле z
+   вместо d. Простую запись читает любой вебвью, сжатую — только не совсем
+   древний, поэтому бот жмёт лишь когда иначе никак. */
+function load_data(){
+  var plain=field("d");
+  if(plain)return Promise.resolve(JSON.parse(new TextDecoder("utf-8").decode(bytesOf(plain))));
+  var packed=field("z");
+  if(!packed)return Promise.reject(new Error("пусто"));
+  if(typeof DecompressionStream!=="function")
+    return Promise.reject(new Error("старый вебвью"));
+  var stream=new Response(bytesOf(packed)).body
+    .pipeThrough(new DecompressionStream("deflate"));
+  return new Response(stream).text().then(JSON.parse);
 }
 
 var SUBJ={astro:1,sferka:2,nebmeh:3,optics:4,prac:5};
-var data=read();
+var data=null;
 var blocks=[];
 
 function load(){
@@ -334,14 +347,22 @@ document.getElementById("reset").addEventListener("click",function(){
 });
 
 /* ---- старт -------------------------------------------------------------- */
-if(data&&data.blocks&&data.blocks.length){load();render();}
-else{
+function fail(why){
   document.getElementById("who").textContent="";
-  document.getElementById("err").textContent=
-    "Программа не приехала: откройте страницу кнопкой в боте, командой /temy.";
+  document.getElementById("err").textContent=why;
   document.getElementById("send").disabled=true;
   document.getElementById("reset").disabled=true;
 }
+
+load_data().then(function(got){
+  data=got;
+  if(!(data&&data.blocks&&data.blocks.length))throw new Error("пусто");
+  load(); render();
+},function(err){
+  fail(String(err.message)==="старый вебвью"
+    ? "Программа не открылась: обновите телеграм — эта версия не умеет её разжать."
+    : "Программа не приехала: откройте страницу кнопкой в боте, командой /temy.");
+});
 </script>
 </body>
 </html>
