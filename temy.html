@@ -408,12 +408,10 @@ load_data().then(function(got){
     document.querySelector(".foot").style.display="none";
   }
   load();
-  /* читателю объяснять правила незачем: он не просил и править не собирался */
-  document.getElementById("hint").textContent=[
-    ro?"":"Нажмите тему — можно переписать название и описание, поменять порядок или убрать её.",
-    Object.keys(data.days||{}).length
-      ? "Дата — по порядку: N-я тема приходится на N-е занятие." : ""
-  ].filter(Boolean).join(" ");
+  /* подсказка говорит, что делать, а не как мы это посчитали: читателю
+     объяснять нечего, он не просил и править не собирался */
+  document.getElementById("hint").textContent=ro?"":
+    "Нажмите тему — можно переписать название и описание, поменять порядок или убрать её.";
   render();
 },function(err){
   fail(String(err.message)==="старый вебвью"
