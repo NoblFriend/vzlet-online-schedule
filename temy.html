@@ -68,6 +68,9 @@ h1{font-size:19px;font-weight:600;margin:0 0 2px}
 .tp .w{float:right;margin:0 0 0 8px;font-size:11px;color:var(--fg2);background:var(--soft);
   border-radius:6px;padding:1px 7px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .tp .td{font-size:12px;color:var(--fg2);margin-top:2px;white-space:pre-wrap}
+.tp .from{font-size:11px;color:var(--fg3);margin-top:3px}
+.bh .lost{font-size:12px;color:var(--fg3)}
+.seg.right{margin-left:auto}
 .tp.gone{opacity:.5}
 .tp.gone .ti{text-decoration:line-through}
 .tp.edit{border-color:var(--line2);box-shadow:var(--sh);cursor:default;background:var(--panel)}
@@ -162,39 +165,63 @@ function load_data(){
 }
 
 var SUBJ={astro:1,sferka:2,nebmeh:3,optics:4,prac:5};
+var YEAR="year", BASE="base";
 var data=null;
-var blocks=[];
+var work={};      // по рабочей копии на слой: правки в одном не теряются при переключении
+var view=YEAR;    // какой слой открыт
 var group=null;   // какая группа открыта: классы листаются вкладками, как на сайте
-var ro=false;     // программу задаёт школа: преподаватель её читает, а правит админ
+
+function blocks(){return work[view]||[];}
+function mayEdit(){
+  return view===YEAR ? (data.can==="year"||data.can==="both") : data.can==="both";
+}
+function forked(){
+  return (data.blocks||[]).some(function(b){return b.layer===YEAR;});
+}
 
 function rank(g){var m=String(g).match(/\d+/);return m?+m[0]:99;}
 function groupsOf(){
   var out=[];
-  blocks.forEach(function(b){if(out.indexOf(b.group)<0)out.push(b.group);});
+  blocks().forEach(function(b){if(out.indexOf(b.group)<0)out.push(b.group);});
   return out.sort(function(a,b){return rank(a)-rank(b);});
 }
 
+/* Один список тем на оба слоя: страница разворачивает его в две рабочие копии.
+   В годовой нет тем программы, до которых не дошли; в программной — тем, которых
+   в программе нет. Текст берётся свой, если он разошёлся. */
 function load(){
-  blocks=(data.blocks||[]).map(function(b){
-    return {block:b.block,group:b.group,subj:b.subj||"",
-            anchor:(b.topics[0]||{}).id,
-            items:(b.topics||[]).map(function(t){
-              return {id:t.id,title:t.t||"",desc:t.d||"",gone:false,
-                      was:{title:t.t||"",desc:t.d||""}};
-            })};
-  });
+  work[YEAR]=lay(YEAR);
+  work[BASE]=lay(BASE);
   var all=groupsOf();
   if(all.indexOf(group)<0)group=all[0];
 }
 
+function lay(mode){
+  return (data.blocks||[]).map(function(b){
+    var items=(b.topics||[]).filter(function(t){
+      return mode===YEAR ? !t.off : !t.new;
+    }).map(function(t){
+      var title=mode===YEAR||t.was===undefined?(t.t||""):t.was;
+      var desc=mode===YEAR||t.wasD===undefined?(t.d||""):t.wasD;
+      return {id:mode===YEAR?t.id:(t.b||t.id),bno:t.bno||0,
+              was:t.was,wasD:t.wasD,isNew:!!t.new,off:!!t.off,
+              title:title,desc:desc,gone:false,orig:{title:title,desc:desc}};
+    });
+    if(mode===BASE)items.sort(function(x,y){return x.bno-y.bno;});
+    return {block:b.block,group:b.group,subj:b.subj||"",layer:b.layer,
+            lost:(b.topics||[]).filter(function(t){return t.off;}).length,
+            anchor:(items[0]||{}).id,order:items.map(function(i){return i.id;}),
+            items:items};
+  });
+}
+
 /* ---- что изменилось ----------------------------------------------------- */
 function dirty(it){
-  return it.id==null||it.gone||it.title!==it.was.title||it.desc!==it.was.desc;
+  return it.id==null||it.gone||it.title!==it.orig.title||it.desc!==it.orig.desc;
 }
 function moved(b){
   var kept=b.items.filter(function(i){return !i.gone&&i.id!=null;}).map(function(i){return i.id;});
-  var was=data.blocks[blocks.indexOf(b)].topics.map(function(t){return t.id;})
-          .filter(function(id){return kept.indexOf(id)>=0;});
+  var was=b.order.filter(function(id){return kept.indexOf(id)>=0;});
   return kept.join(",")!==was.join(",");
 }
 function changed(b){
@@ -202,9 +229,11 @@ function changed(b){
 }
 function count(){
   var n=0;
-  blocks.forEach(function(b){
-    if(moved(b))n++;
-    b.items.forEach(function(i){if(dirty(i))n++;});
+  [YEAR,BASE].forEach(function(mode){
+    (work[mode]||[]).forEach(function(b){
+      if(moved(b))n++;
+      b.items.forEach(function(i){if(dirty(i))n++;});
+    });
   });
   return n;
 }
@@ -215,16 +244,24 @@ var open=null;   // {b:индекс блока, i:индекс темы}
 function render(){
   document.getElementById("who").textContent=data.who||"";
   var all=groupsOf();
-  document.getElementById("bar").innerHTML=all.length<2?"":
+  var tabs=all.length<2?"":
     '<div class="seg">'+all.map(function(g){
       return '<button'+(g===group?' class="on"':"")+' data-g="'+esc(g)+'">'+esc(g)+
              (dirtyGroup(g)?" ·":"")+"</button>";
     }).join("")+"</div>";
+  /* слой показываем переключателем, а не двумя списками подряд: на телефоне
+     два списка не сравнишь, а одним движением видно оба */
+  var layers=(forked()||data.can==="both")?
+    '<div class="seg right">'+
+      '<button'+(view===YEAR?' class="on"':"")+' data-l="year">в этом году</button>'+
+      '<button'+(view===BASE?' class="on"':"")+' data-l="base">в программе</button>'+
+    "</div>":"";
+  document.getElementById("bar").innerHTML=tabs+layers;
 
   /* дата — не свойство темы, а место в очереди: N-я тема группы приходится на
      N-е занятие. Поэтому считаем её заново после каждой перестановки. */
-  var days=(data.days||{})[group]||[], seq=0;
-  var out=blocks.map(function(b,bi){
+  var days=(view===YEAR?(data.days||{})[group]||[]:[]), seq=0;
+  var out=blocks().map(function(b,bi){
     if(b.group!==group)return "";
     var c=SUBJ[b.subj]||6, n=0;
     var rows=b.items.map(function(it,ii){
@@ -232,11 +269,12 @@ function render(){
       it.when=it.gone?"":(days[seq++]||"");
       return card(b,bi,it,ii,n,!!(open&&open.b===bi&&open.i===ii));
     }).join("");
+    var lost=(view===YEAR&&b.lost)?'<span class="lost">в программе ещё '+b.lost+'</span>':"";
     return '<section class="bl" style="--acc:var(--c'+c+'m);--soft:var(--c'+c+'b)">'+
-      '<div class="bh"><b>'+esc(b.block)+'</b>'+
+      '<div class="bh"><b>'+esc(b.block)+'</b>'+lost+
       '<span class="n">'+n+(changed(b)?' · правится':'')+'</span></div>'+
       '<div class="line"></div>'+rows+
-      (ro?"":'<button class="addt" data-add="'+bi+'">+ тема</button>')+'</section>';
+      (mayEdit()?'<button class="addt" data-add="'+bi+'">+ тема</button>':"")+'</section>';
   }).join("");
   document.getElementById("view").innerHTML=out;
   var c=count();
@@ -248,23 +286,33 @@ function render(){
 
 /* правки в другой вкладке не должны пропадать из виду */
 function dirtyGroup(g){
-  return blocks.some(function(b){return b.group===g&&changed(b);});
+  return blocks().some(function(b){return b.group===g&&changed(b);});
 }
 
 document.getElementById("bar").addEventListener("click",function(ev){
-  if(!ev.target.dataset.g)return;
-  keep(); open=null; group=ev.target.dataset.g; render();
+  var t=ev.target;
+  if(!t.dataset.g&&!t.dataset.l)return;
+  keep(); open=null;
+  if(t.dataset.g)group=t.dataset.g; else view=t.dataset.l;
+  render();
 });
 
 function card(b,bi,it,ii,n,editing){
   var num=it.gone?"−":String(n);
   var head='<span class="num">'+num+'</span>';
   if(!editing){
-    return '<div class="tp'+(it.gone?" gone":"")+(dirty(it)?" dirty":"")+
+    /* в годовом слое ничего не зачёркнуто: уточнённая тема не отменена, а
+       уточнена. Откуда она выросла — отдельной строкой, мелким. */
+    var note=view===YEAR
+      ? (it.was!==undefined?"в программе: "+it.was:(it.isNew?"нет в программе":""))
+      : (it.off?"в этом году не было":"");
+    var struck=it.gone||(view===BASE&&it.off);
+    return '<div class="tp'+(struck?" gone":"")+(dirty(it)?" dirty":"")+
       '" data-b="'+bi+'" data-i="'+ii+'">'+head+'<div class="bd">'+
       (it.when&&!it.gone?'<span class="w">'+esc(it.when)+'</span>':'')+
       '<div class="ti">'+esc(it.title||"без названия")+'</div>'+
       (it.desc?'<div class="td">'+esc(it.desc)+'</div>':'')+
+      (note?'<div class="from">'+esc(note)+'</div>':'')+
       '</div></div>';
   }
   var last=b.items.length-1;
@@ -290,7 +338,7 @@ function keep(){
   if(!open)return;
   var box=document.querySelector(".tp.edit");
   if(!box)return;
-  var it=blocks[open.b].items[open.i];
+  var it=blocks()[open.b].items[open.i];
   it.title=box.querySelector(".ei").value;
   it.desc=box.querySelector(".ed").value;
 }
@@ -299,8 +347,9 @@ document.getElementById("view").addEventListener("click",function(ev){
   var t=ev.target;
   if(t.dataset.add!==undefined&&t.dataset.add!==""){
     keep();
-    var b=blocks[+t.dataset.add];
-    b.items.push({id:null,title:"",desc:"",gone:false,was:{title:"",desc:""}});
+    var b=blocks()[+t.dataset.add];
+    b.items.push({id:null,title:"",desc:"",gone:false,isNew:true,
+                  orig:{title:"",desc:""}});
     open={b:+t.dataset.add,i:b.items.length-1};
     render();
     var box=document.querySelector(".tp.edit .ei");
@@ -309,7 +358,7 @@ document.getElementById("view").addEventListener("click",function(ev){
   }
   var box=t.closest?t.closest(".tp"):null;
   if(!box)return;
-  var bi=+box.dataset.b, ii=+box.dataset.i, b=blocks[bi], it=b.items[ii];
+  var bi=+box.dataset.b, ii=+box.dataset.i, b=blocks()[bi], it=b.items[ii];
 
   if(t.dataset.mv){
     keep();
@@ -328,7 +377,7 @@ document.getElementById("view").addEventListener("click",function(ev){
   }
   if(t.dataset.back){keep();it.gone=false;open=null;render();return;}
   if(t.dataset.done){keep();open=null;render();return;}
-  if(box.classList.contains("edit")||ro)return;  // клик внутри полей ввода
+  if(box.classList.contains("edit")||!mayEdit())return;  // клик внутри полей ввода
   keep();
   open={b:bi,i:ii};
   render();
@@ -352,18 +401,20 @@ document.getElementById("view").addEventListener("input",function(ev){
 /* ---- отправка ----------------------------------------------------------- */
 function payload(){
   var out=[];
-  blocks.forEach(function(b){
-    if(!changed(b))return;
-    var list=[];
-    b.items.forEach(function(it){
-      if(it.gone)return;
-      if(it.id==null){list.push({title:it.title.trim(),desc:it.desc.trim()});return;}
-      var one={id:it.id};
-      if(it.title!==it.was.title)one.title=it.title.trim();
-      if(it.desc!==it.was.desc)one.desc=it.desc.trim();
-      list.push(one);
+  [YEAR,BASE].forEach(function(mode){
+    (work[mode]||[]).forEach(function(b){
+      if(!changed(b))return;
+      var list=[];
+      b.items.forEach(function(it){
+        if(it.gone)return;
+        if(it.id==null){list.push({title:it.title.trim(),desc:it.desc.trim()});return;}
+        var one={id:it.id};
+        if(it.title!==it.orig.title)one.title=it.title.trim();
+        if(it.desc!==it.orig.desc)one.desc=it.desc.trim();
+        list.push(one);
+      });
+      out.push({"in":b.anchor,layer:mode,list:list});
     });
-    out.push({"in":b.anchor,list:list});
   });
   return {v:1,kind:"temy",blocks:out};
 }
@@ -373,10 +424,12 @@ document.getElementById("send").addEventListener("click",function(){
   var err=document.getElementById("err");
   if(!count()){err.textContent="Нечего отправлять: правок нет.";return;}
   var empty=false, wiped=false;
-  blocks.forEach(function(b){
-    if(!changed(b))return;
-    if(!b.items.filter(function(i){return !i.gone;}).length)wiped=true;
-    b.items.forEach(function(i){if(!i.gone&&!i.title.trim())empty=true;});
+  [YEAR,BASE].forEach(function(mode){
+    (work[mode]||[]).forEach(function(b){
+      if(!changed(b))return;
+      if(!b.items.filter(function(i){return !i.gone;}).length)wiped=true;
+      b.items.forEach(function(i){if(!i.gone&&!i.title.trim())empty=true;});
+    });
   });
   if(empty){err.textContent="У темы не задано название.";return;}
   if(wiped){err.textContent="Нельзя убрать из блока все темы.";return;}
@@ -402,16 +455,15 @@ function fail(why){
 load_data().then(function(got){
   data=got;
   if(!(data&&data.blocks&&data.blocks.length))throw new Error("пусто");
-  ro=data.can===0;
-  if(ro){
+  load();
+  if(!data.can){
     document.body.classList.add("ro");
     document.querySelector(".foot").style.display="none";
   }
-  load();
   /* подсказка говорит, что делать, а не как мы это посчитали: читателю
      объяснять нечего, он не просил и править не собирался */
-  document.getElementById("hint").textContent=ro?"":
-    "Нажмите тему — можно переписать название и описание, поменять порядок или убрать её.";
+  document.getElementById("hint").textContent=data.can?
+    "Нажмите тему — можно переписать название и описание, поменять порядок или убрать её.":"";
   render();
 },function(err){
   fail(String(err.message)==="старый вебвью"
