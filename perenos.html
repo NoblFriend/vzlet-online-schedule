@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Как перенести занятие</title>
+<style>
+/* Переменные и шрифт — те же, что на расписании: это его страница, а не чужая. */
+:root{
+  --bg:#ffffff;--fg:#1b1b1a;--fg2:#6b6b66;--fg3:#96968f;
+  --line:#e4e4de;--line2:#c8c8c0;--panel:#f1f1ec;--danger:#8c2b2b;
+  --sh:0 1px 2px rgba(0,0,0,.10);--acc:#c9daf8;--acc2:#a4c2f4;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#1a1a18;--fg:#eceae6;--fg2:#a2a29a;--fg3:#78786f;
+  --line:#32322e;--line2:#4a4a44;--panel:#232320;--danger:#e08b8b;
+  --sh:0 1px 2px rgba(0,0,0,.40);--acc:#12233f;--acc2:#a4c2f4;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%}
+.wrap{max-width:680px;margin:0 auto;padding:20px 16px 56px}
+h1{font-size:22px;font-weight:600;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--fg2);font-size:13px;margin:0 0 24px}
+h2{font-size:15px;font-weight:600;margin:28px 0 8px}
+p{margin:0 0 10px}
+.lead{margin:0 0 20px}
+
+/* шаги */
+ol.steps{list-style:none;counter-reset:s;margin:0;padding:0}
+ol.steps li{counter-increment:s;position:relative;padding:0 0 18px 42px}
+ol.steps li::before{content:counter(s);position:absolute;left:0;top:-1px;
+  width:26px;height:26px;border-radius:13px;background:var(--acc);color:var(--fg);
+  font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center}
+ol.steps li::after{content:"";position:absolute;left:13px;top:30px;bottom:2px;width:1px;
+  background:var(--line)}
+ol.steps li:last-child::after{display:none}
+ol.steps b{font-weight:600}
+.said{display:inline-block;background:var(--panel);border:1px solid var(--line);
+  border-radius:7px;padding:1px 8px;font-size:13px;white-space:nowrap}
+.note{color:var(--fg2);font-size:13px;margin-top:3px}
+
+.card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:0 0 14px;
+  background:var(--panel)}
+.card b{display:block;margin-bottom:4px}
+.card p:last-child{margin-bottom:0}
+.warn{border-left:3px solid var(--danger);border-radius:0 12px 12px 0}
+.foot{color:var(--fg3);font-size:12px;margin-top:32px;border-top:1px solid var(--line);
+  padding-top:12px}
+code{background:var(--panel);border-radius:5px;padding:1px 6px;font-size:13px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Как перенести занятие</h1>
+  <p class="sub">Взлёт · онлайн-поток · бот <code>@vzlet_online_manager_bot</code></p>
+
+  <p class="lead">Переносы идут через бота, а не через переписку: так заявку видит координатор,
+    расписание на сайте меняется само, а детям уходит сообщение в канал. Шесть нажатий,
+    меньше минуты.</p>
+
+  <ol class="steps">
+    <li><b>Напишите боту <code>/perenos</code></b>
+      <div class="note">Если бот отвечает, что команда недоступна, — ваш телеграм ещё не привязан.
+        Попросите код у Лёши и отправьте его боту.</div></li>
+
+    <li><b>Выберите курс</b>
+      <div class="note">В списке только ваши курсы.</div></li>
+
+    <li><b>Выберите занятие</b>
+      <div class="note">Показаны только предстоящие, с номером и текущей датой.</div></li>
+
+    <li><b>Выберите новую дату</b>
+      <div class="note">Календарь листается стрелками по месяцам.</div></li>
+
+    <li><b>Выберите время</b>
+      <div class="note">Можно оставить прежнее, взять готовый слот или задать своё —
+        кнопка <span class="said">Другое</span> и время в формате ЧЧ:ММ.</div></li>
+
+    <li><b>Проверьте и нажмите <span class="said">Подтвердить</span></b>
+      <div class="note">Бот покажет «было → стало» и картинку недели, чтобы было видно,
+        куда занятие встанет. Если что-то не так — <span class="said">Отмена</span>,
+        и начинайте заново.</div></li>
+  </ol>
+
+  <h2>Что будет дальше</h2>
+
+  <div class="card">
+    <b>Сразу</b>
+    <p>Заявка уходит координатору и администраторам. У вас остаётся карточка заявки
+      со статусом — это то же сообщение, в котором вы её оформляли.</p>
+  </div>
+
+  <div class="card">
+    <b>Когда координатор перенесёт занятие у себя</b>
+    <p>Он нажмёт кнопку, и всё остальное произойдёт само: расписание на сайте переедет,
+      в канал уйдёт пост о переносе, напоминание за 5 минут встанет на новое время.
+      Статус в вашей карточке сменится.</p>
+  </div>
+
+  <div class="card">
+    <b>Если передумали</b>
+    <p>Пока координатор не нажал кнопку, в карточке есть
+      <span class="said">Отменить заявку</span>. После — поздно: оформляйте новый перенос
+      обратно, занятие уже переехало у координатора.</p>
+  </div>
+
+  <div class="card warn">
+    <b>На что бот поругается</b>
+    <p>Он не запрещает, а предупреждает: если в новое время у этой группы уже стоит
+      занятие, если дата выходит за границы курса или ломает порядок занятий.
+      Прочитайте предупреждение перед «Подтвердить» — обычно оно по делу.</p>
+  </div>
+
+  <h2>Остальные команды</h2>
+  <p><code>/moi</code> — ваши ближайшие занятия.<br>
+     <code>/temy</code> — программа ваших курсов: темы по порядку, с датами.<br>
+     <code>/ktp</code> — расписание таблицей, файлом.</p>
+
+  <p class="foot">Что-то не работает или бот отвечает не то — напишите Лёше.</p>
+</div>
+</body>
+</html>
