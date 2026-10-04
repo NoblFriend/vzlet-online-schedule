@@ -304,7 +304,10 @@ function card(b,bi,it,ii,n,editing){
     /* в годовом слое ничего не зачёркнуто: уточнённая тема не отменена, а
        уточнена. Откуда она выросла — отдельной строкой, мелким. */
     var note=view===YEAR
-      ? (it.was!==undefined?"в программе: "+it.was:(it.isNew?"нет в программе":""))
+      ? (it.was!==undefined ? "в программе: "+it.was
+         : it.isNew ? "нет в программе"
+         /* разойтись можно и одним описанием: «кратко в программе, подробно у нас» */
+         : it.wasD!==undefined ? "в программе описание другое" : "")
       : (it.off?"в этом году не было":"");
     var struck=it.gone||(view===BASE&&it.off);
     return '<div class="tp'+(struck?" gone":"")+(dirty(it)?" dirty":"")+
