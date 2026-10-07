@@ -15,7 +15,14 @@
 #
 # Тревога повторяется на каждой проверке, пока бот молчит. Это сделано
 # намеренно: запоминать, что уже сообщали, негде, а тревога и должна надоедать,
-# пока её не устранили. Когда бот оживёт, сообщения прекратятся сами.
+# пока её не устранили.
+#
+# Когда бот оживает, приходит отбой — иначе непонятно, починилось само или ещё
+# нет. Памяти о том, что тревога была, у сторожа нет, и заводить её негде;
+# поэтому факт «бот только что вернулся» он вычитывает из тех же биений: ищет
+# в их череде пропуск длиннее порога и смотрит, закончился ли этот пропуск
+# позже прошлой проверки. Если позже — значит бот вернулся на наших глазах, и
+# отбой уходит ровно один раз.
 #
 # Расписание GitHub соблюдает нестрого, запуск может опоздать на четверть часа.
 # Поэтому порог сделан с запасом: тревога поднимается, только если сигнала нет
@@ -31,6 +38,10 @@ on:
         description: "Через сколько минут тишины поднимать тревогу (для проверки)"
         required: false
         default: "45"
+      gap_min:
+        description: "Какой пропуск в биениях считать падением (для проверки отбоя)"
+        required: false
+        default: ""
 
 
 permissions:
@@ -49,17 +60,33 @@ jobs:
           script: |
             // порог можно занизить при ручном запуске: непроверенная тревога — не тревога
             const LIMIT_MIN = Number(context.payload.inputs?.limit_min ?? 45);
+            const GAP_MIN = Number(context.payload.inputs?.gap_min || LIMIT_MIN);
             const TITLE = "Бот расписания не подаёт признаков жизни";
             const { owner, repo } = context.repo;
 
-            let last = null;
+            // Биений берём несколько: по одному видно только, жив ли бот сейчас,
+            // а по череде — был ли в ней провал и когда он кончился.
+            let beats = [];
             try {
               const runs = await github.rest.actions.listWorkflowRuns({
-                owner, repo, workflow_id: "heartbeat.yml", per_page: 1,
+                owner, repo, workflow_id: "heartbeat.yml", per_page: 30,
               });
-              last = runs.data.workflow_runs[0] || null;
+              beats = runs.data.workflow_runs;
             } catch (e) {
               core.info("обработчик сигнала ещё не заведён: " + e.message);
+            }
+            const last = beats[0] || null;
+
+            // когда была прошлая проверка: по ней отличаем «вернулся только что»
+            // от «вернулся давно, мы уже отбивались»
+            let prevCheck = null;
+            try {
+              const mine = await github.rest.actions.listWorkflowRuns({
+                owner, repo, workflow_id: "watchdog.yml", per_page: 2,
+              });
+              prevCheck = mine.data.workflow_runs[1] || null;
+            } catch (e) {
+              core.info("прошлую проверку не прочитал: " + e.message);
             }
 
             const age = last ? (Date.now() - new Date(last.created_at)) / 60000 : Infinity;
@@ -104,11 +131,39 @@ jobs:
                 await github.rest.issues.create({ owner, repo, title: TITLE, body });
                 core.warning("телеграм не настроен, тревога заведена issue");
               }
-            } else if (alarm) {
-              await github.rest.issues.update({
-                owner, repo, issue_number: alarm.number, state: "closed",
-              });
-              core.info("бот на связи, прежняя тревога закрыта");
             } else {
-              core.info(`всё в порядке, последний сигнал ${Math.round(age)} мин назад`);
+              if (alarm) {
+                await github.rest.issues.update({
+                  owner, repo, issue_number: alarm.number, state: "closed",
+                });
+                core.info("бот на связи, прежняя тревога закрыта");
+              }
+
+              // ищем ближайший к нам провал в череде биений
+              let back = null, gone = 0;
+              for (let i = 0; i + 1 < beats.length; i++) {
+                const span = (new Date(beats[i].created_at) - new Date(beats[i + 1].created_at)) / 60000;
+                if (span > GAP_MIN) { back = beats[i]; gone = span; break; }
+              }
+              const fresh = back && (!prevCheck ||
+                new Date(back.created_at) > new Date(prevCheck.created_at));
+
+              if (fresh) {
+                const hours = gone >= 120
+                  ? `${Math.round(gone / 60)} ч` : `${Math.round(gone)} мин`;
+                const ahead = back.display_title && back.display_title !== "сигнал"
+                  ? back.display_title : null;
+                const body = `Бот снова на связи с ${back.created_at}.\n\n` +
+                  `Молчал ${hours}. Что за это время не ушло в канал, бот не досылает: ` +
+                  "напоминание живёт час и после протухает.\n\n" +
+                  (ahead ? `Ближайшее занятие: ${ahead}.` : "");
+                if (tg && chats.length) {
+                  await toTelegram(`<b>Бот расписания снова жив</b>\n\n${body}`);
+                  core.info("отбой отправлен в телеграм");
+                } else {
+                  core.info("отбой некому слать: телеграм не настроен");
+                }
+              } else {
+                core.info(`всё в порядке, последний сигнал ${Math.round(age)} мин назад`);
+              }
             }
