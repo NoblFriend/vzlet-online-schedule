@@ -25,6 +25,7 @@ var POSTS =
   "сферка-base-10-11#1": {"post": "https://t.me/c/4421238966/47", "rec": true},
   "сферка-base-10-11#2": {"post": "https://t.me/c/4421238966/57", "rec": true},
   "сферка-base-10-11#3": {"post": "https://t.me/c/4421238966/69", "rec": true},
+  "сферка-base-10-11#4": {"post": "https://t.me/c/4421238966/80"},
   "сферка-i-10-11#1": {"post": "https://t.me/c/4421238966/43", "rec": true},
   "сферка-i-10-11#2": {"post": "https://t.me/c/4421238966/37", "rec": true},
   "сферка-i-10-11#3": {"post": "https://t.me/c/4421238966/61", "rec": true},
