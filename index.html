@@ -326,11 +326,13 @@ function occurrences(s,st,sk){
     if(!sk[iso(monday(d))]){
       var idx=out.length+1,o=om[s.id+"#"+idx];
       var it={idx:idx,date:d,time:s.time||"",teacher:s.teacher||"",series:s,st:st,
-              tbd:!s.time,moved:false,cancel:false,note:"",topic:"",sub:false,
+              tbd:!s.time,moved:false,delay:false,cancel:false,note:"",topic:"",sub:false,
               orig:d,origTime:s.time||"",origTeacher:s.teacher||""};
       if(o){
         if(o.date){it.date=D(o.date);it.moved=true;}
-        if(o.time){it.time=o.time;it.tbd=false;it.moved=true;}
+        // тот же день, но позже — задержка начала: занятие не переезжало,
+        // поэтому ни пометки «перенос», ни призрака на старом месте
+        if(o.time){it.time=o.time;it.tbd=false;if(o.delay)it.delay=true;else it.moved=true;}
         if(o.teacher&&o.teacher!==s.teacher){it.teacher=o.teacher;it.sub=true;}
         if(o.cancel){it.cancel=true;}
         it.note=o.note||"";
@@ -438,6 +440,7 @@ function hourSpan(all,wk){
 function noteOf(o){
   if(o.cancel)return "отменено"+(o.note?" · "+esc(o.note):"");
   if(o.moved)return "перенос"+(o.note?" · "+esc(o.note):"");
+  if(o.delay)return "начало задержано"+(o.note?" · "+esc(o.note):"");
   if(o.sub)return "замена"+(o.note?" · "+esc(o.note):"");
   return esc(o.note);
 }
@@ -481,7 +484,7 @@ function slotText(d,t){return WDS[wdIdx(d)]+" "+fmt(d)+(t?" "+esc(t):"");}
 /* переносы, отмены, замены и комментарии, касающиеся показанной недели (откуда или куда) */
 function changesHtml(all){
   var list=all.filter(function(o){
-    return (o.moved||o.cancel||o.sub||o.note)&&
+    return (o.moved||o.delay||o.cancel||o.sub||o.note)&&
       (iso(monday(o.orig))===week||iso(monday(o.date))===week);
   }).sort(function(a,b){return a.date-b.date;});
   if(!list.length)return "";
@@ -490,6 +493,8 @@ function changesHtml(all){
     var c=o.series.color||1,tg=tagOf(o),what=[];
     if(o.cancel)what.push("<b>отменено</b> "+slotText(o.orig,o.origTime));
     else if(o.moved)what.push("<b>перенос</b> "+slotText(o.orig,o.origTime)+" \u2192 "+slotText(o.date,o.time));
+    else if(o.delay)what.push("<b>начало задержано</b> "+slotText(o.date,"")+
+                              " <s>"+esc(o.origTime)+"</s> "+esc(o.time));
     if(o.sub)what.push("<b>замена</b> "+esc(o.origTeacher||"\u2014")+" \u2192 "+esc(o.teacher));
     if(o.note)what.push(esc(o.note));
     h+='<div class="chr"><span class="dot" style="background:var(--c'+c+'f)"></span><div><div class="chn">'+
