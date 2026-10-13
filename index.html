@@ -440,7 +440,8 @@ function hourSpan(all,wk){
 function noteOf(o){
   if(o.cancel)return "отменено"+(o.note?" · "+esc(o.note):"");
   if(o.moved)return "перенос"+(o.note?" · "+esc(o.note):"");
-  if(o.delay)return "начало задержано"+(o.note?" · "+esc(o.note):"");
+  /* в ячейку помещается одно слово, как «перенос»; полная фраза — в блоке изменений */
+  if(o.delay)return "задержка"+(o.note?" · "+esc(o.note):"");
   if(o.sub)return "замена"+(o.note?" · "+esc(o.note):"");
   return esc(o.note);
 }
