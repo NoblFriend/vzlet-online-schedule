@@ -31,6 +31,7 @@ var POSTS =
   "небмех-i-7-9#1": {"post": "https://t.me/c/4421238966/64", "rec": true},
   "небмех-i-7-9#2": {"post": "https://t.me/c/4421238966/75", "rec": true},
   "небмех-i-7-9#3": {"post": "https://t.me/c/4421238966/88", "rec": true},
+  "небмех-i-7-9#4": {"post": "https://t.me/c/4421238966/107"},
   "сферка-base-10-11#1": {"post": "https://t.me/c/4421238966/47", "rec": true},
   "сферка-base-10-11#2": {"post": "https://t.me/c/4421238966/57", "rec": true},
   "сферка-base-10-11#3": {"post": "https://t.me/c/4421238966/69", "rec": true},
