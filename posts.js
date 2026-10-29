@@ -53,6 +53,7 @@ var POSTS =
   "сферка-i-7-9#5": {"post": "https://t.me/c/4421238966/78", "rec": true},
   "сферка-i-7-9#6": {"post": "https://t.me/c/4421238966/93", "rec": true},
   "сферка-ii-7-9#1": {"post": "https://t.me/c/4421238966/109", "rec": true},
-  "сферка-pro-10-11#1": {"post": "https://t.me/c/4421238966/104", "rec": true}
+  "сферка-pro-10-11#1": {"post": "https://t.me/c/4421238966/104", "rec": true},
+  "сферка-pro-10-11#2": {"post": "https://t.me/c/4421238966/115"}
 }
 ;
