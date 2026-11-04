@@ -39,6 +39,7 @@ var POSTS =
   "небмех-i-7-9#4": {"post": "https://t.me/c/4421238966/107", "rec": true},
   "небмех-i-7-9#5": {"post": "https://t.me/c/4421238966/120", "rec": true},
   "небмех-ii-10-11#1": {"post": "https://t.me/c/4421238966/114", "rec": true},
+  "небмех-ii-10-11#2": {"post": "https://t.me/c/4421238966/129"},
   "рег-астрофиз-i-10-11#1": {"post": "https://t.me/c/4421238966/117", "rec": true},
   "сферка-base-10-11#1": {"post": "https://t.me/c/4421238966/47", "rec": true},
   "сферка-base-10-11#2": {"post": "https://t.me/c/4421238966/57", "rec": true},
