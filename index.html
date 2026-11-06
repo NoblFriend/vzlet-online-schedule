@@ -280,7 +280,7 @@ function nowMin(){var p=zoneParts();return ((+p.hour)%24)*60+(+p.minute);}
 function curWeek(){return iso(monday(today()));}
 function mins(t){var p=String(t).split(":");return (+p[0])*60+(+p[1]||0);}
 function hm(m){return Math.floor(m/60)+":"+("0"+m%60).slice(-2);}
-function dur(o){return o.series.duration||data.duration||90;}
+function dur(o){return o.duration||o.series.duration||data.duration||90;}
 function cap(t){t=String(t);return t.charAt(0).toUpperCase()+t.slice(1);}
 
 function isBoth(){return selS.length>1;}
@@ -329,6 +329,7 @@ function occurrences(s,st,sk){
               tbd:!s.time,moved:false,delay:false,cancel:false,note:"",topic:"",sub:false,
               orig:d,origTime:s.time||"",origTeacher:s.teacher||""};
       if(o){
+        if(o.duration)it.duration=o.duration;
         if(o.date){it.date=D(o.date);it.moved=true;}
         // тот же день, но позже — задержка начала: занятие не переезжало,
         // поэтому ни пометки «перенос», ни призрака на старом месте
