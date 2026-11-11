@@ -6,22 +6,22 @@ var SCHEDULE =
   "streams": [
     {
       "id": "ai-basic",
-      "name": "ИИ · Базовая",
-      "short": "ИИ",
+      "name": "Базовый поток",
+      "short": "База",
       "skips": [],
       "series": [
-        {"id": "ai-basic-math", "group": "Базовая", "name": "Базовая математика", "subject": "math", "teacher": "Илларионов Кирилл Алексеевич", "start": "2026-11-11", "time": "17:30", "duration": 90, "count": 7, "color": 3},
-        {"id": "ai-basic-ml", "group": "Базовая", "name": "Базовый ML", "subject": "ml", "teacher": "Кистин Матвей", "start": "2026-11-12", "time": "19:30", "duration": 90, "count": 7, "color": 2}
+        {"id": "ai-basic-math", "group": "База", "name": "Математика", "subject": "math", "teacher": "Илларионов Кирилл Алексеевич", "start": "2026-11-11", "time": "17:30", "duration": 90, "count": 7, "color": 3},
+        {"id": "ai-basic-ml", "group": "База", "name": "ML", "subject": "ml", "teacher": "Кистин Матвей", "start": "2026-11-12", "time": "19:30", "duration": 90, "count": 7, "color": 2}
       ]
     },
     {
       "id": "ai-advanced",
-      "name": "ИИ · Продвинутая",
-      "short": "ИИ",
+      "name": "Продвинутый поток",
+      "short": "Про",
       "skips": [],
       "series": [
-        {"id": "ai-advanced-math", "group": "Продвинутая", "name": "Продвинутая математика", "subject": "math", "teacher": "Акиньщиков А.", "start": "2026-11-12", "time": "17:30", "duration": 90, "count": 7, "color": 3},
-        {"id": "ai-advanced-ml", "group": "Продвинутая", "name": "Продвинутый ML", "subject": "ml", "teacher": "Лебедев Иван Александрович", "start": "2026-11-13", "time": "17:30", "duration": 90, "count": 7, "color": 2}
+        {"id": "ai-advanced-math", "group": "Про", "name": "Математика", "subject": "math", "teacher": "Акиньщиков А.", "start": "2026-11-12", "time": "17:30", "duration": 90, "count": 7, "color": 3},
+        {"id": "ai-advanced-ml", "group": "Про", "name": "ML", "subject": "ml", "teacher": "Лебедев Иван Александрович", "start": "2026-11-13", "time": "17:30", "duration": 90, "count": 7, "color": 2}
       ]
     }
   ],
