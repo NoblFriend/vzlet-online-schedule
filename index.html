@@ -323,11 +323,15 @@ function passed(o){
 function occurrences(s,st,sk){
   var om=ovMap(),out=[],d=D(s.start),guard=0;
   while(out.length<s.count&&guard++<400){
-    if(!sk[iso(monday(d))]){
+    var planned=s.dates&&s.dates[out.length];
+    if(s.dates&&!planned)break;
+    if(planned)d=D(planned.date);
+    var slotTime=planned?planned.time:s.time;
+    if(planned||!sk[iso(monday(d))]){
       var idx=out.length+1,o=om[s.id+"#"+idx];
-      var it={idx:idx,date:d,time:s.time||"",teacher:s.teacher||"",series:s,st:st,
-              tbd:!s.time,moved:false,delay:false,cancel:false,note:"",topic:"",sub:false,
-              orig:d,origTime:s.time||"",origTeacher:s.teacher||""};
+      var it={idx:idx,date:d,time:slotTime||"",teacher:s.teacher||"",series:s,st:st,
+              tbd:!slotTime,moved:false,delay:false,cancel:false,note:"",topic:"",sub:false,
+              orig:d,origTime:slotTime||"",origTeacher:s.teacher||""};
       if(o){
         if(o.duration)it.duration=o.duration;
         if(o.date){it.date=D(o.date);it.moved=true;}
