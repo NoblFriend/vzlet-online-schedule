@@ -11,7 +11,7 @@ var SCHEDULE =
       "skips": [],
       "series": [
         {"id": "ai-basic-math", "group": "Базовая", "name": "Базовая математика", "subject": "math", "teacher": "Илларионов Кирилл Алексеевич", "start": "2026-11-11", "time": "17:30", "duration": 90, "count": 7, "color": 3},
-        {"id": "ai-basic-ml", "group": "Базовая", "name": "Базовый ML", "subject": "ml", "teacher": "Ребриков А.", "start": "2026-11-12", "time": "19:30", "duration": 90, "count": 7, "color": 2}
+        {"id": "ai-basic-ml", "group": "Базовая", "name": "Базовый ML", "subject": "ml", "teacher": "Кистин Матвей", "start": "2026-11-12", "time": "19:30", "duration": 90, "count": 7, "color": 2}
       ]
     },
     {
