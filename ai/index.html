@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ИИ · Онлайн — расписание</title>
+<style>
+:root{
+  --bg:#ffffff;--fg:#1b1b1a;--fg2:#6b6b66;--fg3:#96968f;
+  --line:#e4e4de;--line2:#c8c8c0;--panel:#f1f1ec;--danger:#8c2b2b;--skip:#eeeeea;
+  --sh:0 1px 2px rgba(0,0,0,.10);--half:#f3f3ef;--hatch:#d9d9d2;--today:#fafaf6;
+  /* цвета предметов: 1 астрофиз, 2 сферка, 3 небмех, 4 оптика, 5 прак, 6 без предмета.
+     Фон и акцент — пара тонов из таблицы курсов один в один, текст общий #1b1b1a:
+     так же устроены обложки постов, чтобы сайт и канал не расходились.
+     --cNm (акцент) — пунктир призраков у перенесённых занятий */
+  --c1b:#c9daf8;--c1f:#1b1b1a;--c1m:#a4c2f4;
+  --c2b:#d9ead3;--c2f:#1b1b1a;--c2m:#b6d7a8;
+  --c3b:#f4cccc;--c3f:#1b1b1a;--c3m:#ea9999;
+  --c4b:#d9d2e9;--c4f:#1b1b1a;--c4m:#b4a7d6;
+  --c5b:#ead1dc;--c5f:#1b1b1a;--c5m:#d5a6bd;
+  --c6b:#f1f1ec;--c6f:#1b1b1a;--c6m:#e4e4de;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#1a1a18;--fg:#eceae6;--fg2:#a2a29a;--fg3:#78786f;
+  --line:#32322e;--line2:#4a4a44;--panel:#232320;--danger:#e08b8b;--skip:#2a2a27;
+  --sh:0 1px 2px rgba(0,0,0,.40);--half:#242421;--hatch:#3a3a35;--today:#1f1f1c;
+  --c1b:#12233f;--c1f:#c9daf8;--c1m:#a4c2f4;
+  --c2b:#25331e;--c2f:#d9ead3;--c2m:#b6d7a8;
+  --c3b:#3c1616;--c3f:#f4cccc;--c3m:#ea9999;
+  --c4b:#241e33;--c4f:#d9d2e9;--c4m:#b4a7d6;
+  --c5b:#331f29;--c5f:#ead1dc;--c5m:#d5a6bd;
+  --c6b:#2c2c26;--c6f:#f1f1ec;--c6m:#e4e4de;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
+.wrap{max-width:880px;margin:0 auto;padding:16px 14px 56px}
+h1{font-size:19px;font-weight:600;margin:0 0 2px}
+.sub{color:var(--fg2);font-size:13px;margin:0 0 14px}
+
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 16px}
+.seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:2px}
+.seg button{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;border:0;background:transparent;color:var(--fg2);font-family:inherit;font-size:13px;
+  padding:5px 11px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:var(--bg);color:var(--fg);font-weight:600;box-shadow:var(--sh)}
+.seg.right{margin-left:auto}
+/* второй переключатель справа встаёт вплотную к первому, а не делит с ним пустоту */
+.seg.right+.seg.right{margin-left:8px}
+.hint{flex-basis:100%;font-size:11px;color:var(--fg3);margin-top:-2px}
+
+.nav{display:flex;align-items:center;gap:8px;margin:0 0 14px}
+.arw{width:30px;height:30px;padding:0;line-height:1;border:1px solid var(--line2);background:var(--bg);
+  color:var(--fg);border-radius:8px;font-size:17px;font-family:inherit;cursor:pointer}
+.arw[disabled]{opacity:.3;cursor:default}
+.wt{font-size:16px;font-weight:600;flex:1;margin-left:3px}
+.tdy{border:1px solid var(--line2);background:var(--bg);color:var(--fg2);border-radius:8px;
+  font-family:inherit;font-size:12px;padding:5px 10px;cursor:pointer}
+.cur{font-size:12px;color:var(--fg3)}
+
+.cal{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px}
+.cgrid{min-width:540px;--cols:54px repeat(7,minmax(0,1fr))}
+.crow{display:grid;grid-template-columns:var(--cols)}
+.gut{position:sticky;left:0;z-index:3;background:var(--bg);font-size:10px;color:var(--fg3);
+  text-align:right;padding-right:6px}
+.chead{border-bottom:1px solid var(--line)}
+.dhd{padding:7px 2px 6px;text-align:center;border-left:1px solid var(--line);line-height:1.15}
+.dhd .dw{display:block;font-size:11px;color:var(--fg2)}
+.dhd .dn{display:inline-block;font-size:15px;font-weight:600;min-width:26px;height:26px;line-height:26px;
+  border-radius:13px;margin-top:2px;padding:0 4px}
+.dhd.td .dn{background:var(--fg);color:var(--bg)}
+.allday{border-bottom:1px solid var(--line)}
+.allday .gut{display:flex;align-items:center;justify-content:flex-end;line-height:1.1;padding:4px 6px 4px 0}
+.adc{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:4px;padding:5px;border-left:1px solid var(--line)}
+.chip{font-size:12px;padding:3px 8px;border-radius:6px}
+.chip b{font-weight:600}
+.chip i{font-style:normal;opacity:.65;margin-left:4px;font-variant-numeric:tabular-nums}
+.skipb{flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px;padding:5px;border-radius:6px;
+  background:repeating-linear-gradient(135deg,var(--hatch) 0 1.5px,transparent 1.5px 7px)}
+.skl{background:var(--bg);color:var(--fg);font-size:12px;padding:2px 9px;border-radius:5px;
+  box-shadow:0 0 0 1px var(--line)}
+.skl b{font-weight:600}
+.cbody{position:relative}
+.offov{position:absolute;left:54px;right:0;top:0;bottom:0;z-index:4;display:flex;align-items:center;
+  justify-content:center;background:repeating-linear-gradient(135deg,var(--hatch) 0 1.5px,transparent 1.5px 9px)}
+.offl{display:flex;flex-direction:column;align-items:center;gap:6px}
+.offl .skl{font-size:15px;font-weight:600;padding:6px 16px;border-radius:8px}
+.skn{font-size:12px;color:var(--fg2);background:var(--bg);padding:1px 8px;border-radius:4px}
+.hl{position:absolute;right:6px;transform:translateY(-50%);font-variant-numeric:tabular-nums}
+.dcol{position:relative;border-left:1px solid var(--line);
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(var(--half) 1px,transparent 1px);
+  background-size:100% 60px,100% 30px;background-position:0 8px,0 8px;background-repeat:repeat-y}
+.dcol.td{background-color:var(--today)}
+.ev{position:absolute;display:flex;flex-direction:column;border-radius:6px;padding:4px 6px;font-size:11px;
+  line-height:1.25;overflow:hidden;
+  container-type:inline-size;height:var(--h);cursor:default;
+  transition:left .18s ease,width .18s ease,box-shadow .18s ease}
+/* наведение на компьютере — на ширину дня; тап на телефоне — до размера блока на компьютере
+   (около 112px), поверх соседних дней; у дней справа раскрывается влево */
+@media (hover:hover){.ev:hover{left:2px!important;width:calc(100% - 4px)!important;height:auto;
+  min-height:var(--h);z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+  .ev.rt:hover{left:auto!important;right:2px}}
+.ev.open{left:2px!important;width:max(calc(100% - 4px),112px)!important;height:auto;min-height:var(--h);
+  z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.ev.rt.open{left:auto!important;right:2px}
+.ev .r1 span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.chg{margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.chh{font-size:12px;font-weight:600;color:var(--fg2);margin-bottom:6px}
+.chr{display:flex;gap:9px;align-items:flex-start;padding:5px 0;border-top:1px solid var(--line)}
+.chh+.chr{border-top:0}
+.chr .dot{width:8px;height:8px;border-radius:4px;margin-top:6px;flex:none}
+.chn{font-weight:600;font-size:14px}
+.chi{font-weight:400;font-size:12px;color:var(--fg2)}
+.chw{font-size:13px;color:var(--fg2)}
+.chw b{color:var(--fg);font-weight:600}
+.ev .r1{display:flex;justify-content:space-between;gap:4px;font-weight:600;font-variant-numeric:tabular-nums}
+.ev .r1 i{font-style:normal;font-weight:400;opacity:.65}
+.ev .nm{font-weight:600;font-size:12px;overflow-wrap:break-word;margin-top:1px}
+.ev .mt{opacity:.8}
+.etag{font-weight:600}
+@container (max-width:86px){
+  .ev .r1 i{display:none}
+  .ev .mt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ev .nm{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ev .note{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+}
+.ev.cancel .nm{text-decoration:line-through;opacity:.6}
+.ev.gh{background:var(--bg);background:color-mix(in srgb,currentColor 9%,var(--bg));border:1px dashed}
+.ev.gh .nm{text-decoration:line-through}
+/* подсветка занятия: ?highlight=курс#номер — бот так делает картинку недели.
+   Имя не hl: этот класс уже занят подписями часов, и карточка унаследовала бы
+   от них transform:translateY(-50%) — уезжала вверх на полвысоты */
+.ev.hilite{outline:2.5px solid var(--fg);outline-offset:1px;z-index:6!important;
+  box-shadow:0 0 0 1.5px var(--bg),0 6px 16px rgba(0,0,0,.22)}
+/* ссылка на пост в канале: видна, когда карточка раскрыта */
+.ev .plink,.ev .lesson-state{display:none}
+.ev.open .lesson-state{display:block;margin-top:3px;font-size:11px}
+.ev.open .plink{display:block;margin-top:3px;font-weight:600;text-decoration:underline;color:inherit}
+/* ?shot=1 — режим скриншота: в кадре только неделя */
+body.shot .bar,body.shot .hint,body.shot .arw,body.shot .tdy{display:none}
+body.shot .nav{margin-left:0}
+/* информация о переносе прижата к низу карточки и отделена чертой */
+.ev .note{position:relative;margin-top:auto;padding-top:4px;font-weight:600;font-size:11px}
+.ev .note::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:currentColor;opacity:.3}
+.nowl{position:absolute;left:0;right:0;height:2px;background:#e5484d;z-index:2;pointer-events:none}
+.nowl::before{content:"";position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:4px;background:#e5484d}
+.empty{color:var(--fg2);font-size:14px;padding:16px 0}
+/* вкладка записей: те же курсы, но строчками и со ссылкой на пост в канале */
+.recs{display:flex;flex-direction:column}
+.rhd{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--fg2);padding:14px 0 6px}
+.rcourse{margin:0 0 14px}
+.rname{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;margin:0 0 5px}
+.rname::before{content:"";width:10px;height:10px;border-radius:3px;background:var(--rc)}
+.rrow{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;padding:7px 10px;border-radius:7px;
+  border:1px solid var(--line);text-decoration:none;color:inherit;font-size:13px}
+.rrow+.rrow{margin-top:4px}
+@media (hover:hover){a.rrow:hover{background:var(--panel);border-color:var(--line2)}}
+.rrow.off{color:var(--fg3);border-style:dashed}
+.rnum{font-variant-numeric:tabular-nums;color:var(--fg2);min-width:1.6em}
+.rwhen{font-variant-numeric:tabular-nums;white-space:nowrap}
+/* преподаватель занимает остаток строки и сжимается первым */
+.rwho{flex:1;min-width:0;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rgo{margin-left:auto;font-weight:600;overflow-wrap:anywhere}
+.rec-help{color:var(--fg2);font-size:13px;line-height:1.5;margin:0 0 12px}
+/* тема занятия: чем оно было, а не когда. Второй строкой, потому что бывает длинной */
+.rtopic{flex-basis:100%;color:var(--fg2);font-size:12px;line-height:1.35;
+  padding-left:calc(1.6em + 10px)}
+.rrow.off .rtopic{color:var(--fg3)}
+.rrow.off .rgo{font-weight:400}
+@media (max-width:420px){.rwho{display:none}}
+
+.tl{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px;--tn:190px}
+.tg{display:grid;min-width:min-content}
+.tg>div{min-width:0}
+.tn{position:sticky;left:0;z-index:2;background:var(--bg);padding:8px 12px 8px 12px;border-right:1px solid var(--line)}
+.tn .nm{font-weight:600;font-size:13px;line-height:1.25}
+.tn .mt{font-size:11px;color:var(--fg2);margin-top:1px}
+.tn.hd{border-bottom:1px solid var(--line)}
+.tmo{font-size:11px;color:var(--fg2);padding:8px 6px 0;border-left:1px solid var(--line);white-space:nowrap}
+.tmo.first{border-left:0}
+.twk{font-size:12px;text-align:center;padding:2px 0 7px;color:var(--fg2);border-bottom:1px solid var(--line);
+  cursor:pointer;font-variant-numeric:tabular-nums}
+.twk span{display:inline-block;min-width:24px;height:22px;line-height:22px;border-radius:11px;padding:0 3px}
+.twk:hover span{background:var(--panel)}
+.twk.now span{background:var(--fg);color:var(--bg);font-weight:600}
+.tcl{display:flex;align-items:center;padding:0;min-height:48px}
+.tn.sep,.tcl.sep{border-top:1px solid var(--line)}
+.tcl.now{background:var(--today)}
+.tbar{flex:1;height:26px;margin:0 1px;display:flex;align-items:center;justify-content:center;font-size:11px;
+  font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;position:relative}
+.tbar.l{border-top-left-radius:13px;border-bottom-left-radius:13px;margin-left:3px}
+.tbar.r{border-top-right-radius:13px;border-bottom-right-radius:13px;margin-right:3px}
+.tbar:hover{filter:brightness(.96)}
+.tbar.x{opacity:.45;text-decoration:line-through}
+.tbar.mv::after{content:"";position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:3px;background:currentColor}
+.twk.off{color:var(--fg3)}
+.tskip{display:flex;align-items:center;justify-content:center;margin:4px 1px;border-radius:6px;overflow:hidden;
+  background:repeating-linear-gradient(135deg,var(--hatch) 0 1.5px,transparent 1.5px 7px)}
+.tskip span{writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;color:var(--fg2);background:var(--bg);
+  padding:6px 1px;border-radius:4px;white-space:nowrap}
+.tskip.wide span{writing-mode:horizontal-tb;transform:none;padding:2px 8px}
+.tsec{grid-column:1 / -1;background:var(--panel);border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--fg2);padding:5px 0}
+.tsec span{position:sticky;left:12px;padding-left:12px}
+@media (max-width:560px){.tl{--tn:128px}.tn{padding:8px}}
+.msg.err{font-size:13px;color:var(--danger)}
+</style>
+<style>
+/* ИИ: бренд красно-белый, исходная предметная палитра сохраняется. */
+h1{color:#c9002b} header{border-top:4px solid #c9002b} 
+@media(prefers-color-scheme:dark){h1{color:#ff6d88}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="title">Расписание</h1>
+  <p class="sub" id="sub"></p>
+  <div class="bar" id="bar"></div>
+  <div id="nav"></div>
+  <div id="view"></div>
+  <div class="msg err" id="msg"></div>
+</div>
+<script>
+/* данные грузим с меткой времени, иначе браузер показывает старую копию из кэша.
+   С диска это тоже нужно: файлы перегенерируются часто, а путь не меняется */
+document.write('<script src="schedule.js?v='+Date.now()+'"><\/script>');
+document.write('<script src="posts.js?v='+Date.now()+'"><\/script>');
+</script>
+<script>
+var WDS=["пн","вт","ср","чт","пт","сб","вс"];
+var MG=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+var MN=["январь","февраль","март","апрель","май","июнь","июль","август","сентябрь","октябрь","ноябрь","декабрь"];
+
+var data={streams:[],overrides:[]},selS=[],selG=[],view="week",mode="schedule",week=null;
+/* выбор потоков и групп на вкладке расписания: на вкладке записей он свой, и его надо вернуть */
+var keepS=null,keepG=null;
+
+/* параметры адресной строки: week — какую неделю открыть, highlight — какое занятие
+   обвести, stream/group — что выбрать, view — вид, shot — режим скриншота.
+   Ими пользуется бот, когда рендерит картинку недели тем же самым index.html. */
+function qparams(){
+  var m={},q=location.search.replace(/^\?/,"");
+  if(!q)return m;
+  q.split("&").forEach(function(p){
+    var i=p.indexOf("=");
+    if(i>0)m[decodeURIComponent(p.slice(0,i))]=decodeURIComponent(p.slice(i+1).replace(/\+/g," "));
+  });
+  return m;
+}
+var Q=qparams(),HL=Q.highlight||"";
+var POST=(typeof POSTS!=="undefined"&&POSTS)?POSTS:{};
+function lkey(o){return o.series.id+"#"+o.idx;}
+
+function D(s){var p=String(s).split("-");return new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));}
+function iso(d){return d.toISOString().slice(0,10);}
+function addD(d,n){return new Date(d.getTime()+n*86400000);}
+function wdIdx(d){return (d.getUTCDay()+6)%7;}
+function monday(d){return addD(d,-wdIdx(d));}
+function fmt(d){return ("0"+d.getUTCDate()).slice(-2)+"."+("0"+(d.getUTCMonth()+1)).slice(-2);}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
+/* дата берётся по местному календарю: иначе ночью неделя съезжает на предыдущую */
+/* Расписание московское, а смотрят на него откуда угодно. Поэтому «сегодня» и
+   часы считаем в зоне расписания: у человека из другого города иначе съедет и
+   выделение текущего дня, и граница «занятие прошло». Зону присылает бот в
+   schedule.js — она там же, где остальные настройки, а не вкопана сюда. */
+var TZ_DEFAULT="Europe/Moscow",_tz=null,_tzFmt=null;
+function zoneParts(){
+  var z=(data&&data.tz)||TZ_DEFAULT;
+  if(_tz!==z){
+    _tz=z;
+    try{
+      _tzFmt=new Intl.DateTimeFormat("en-CA",{timeZone:z,year:"numeric",month:"2-digit",
+        day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false});
+    }catch(e){_tzFmt=null;}   /* зона не понята — считаем по местным часам */
+  }
+  var n=new Date();
+  if(!_tzFmt)return {year:n.getFullYear(),month:("0"+(n.getMonth()+1)).slice(-2),
+                     day:("0"+n.getDate()).slice(-2),hour:n.getHours(),minute:n.getMinutes()};
+  var o={};
+  _tzFmt.formatToParts(n).forEach(function(p){o[p.type]=p.value;});
+  return o;
+}
+function today(){var p=zoneParts();return D(p.year+"-"+p.month+"-"+p.day);}
+function nowMin(){var p=zoneParts();return ((+p.hour)%24)*60+(+p.minute);}
+function curWeek(){return iso(monday(today()));}
+function mins(t){var p=String(t).split(":");return (+p[0])*60+(+p[1]||0);}
+function hm(m){return Math.floor(m/60)+":"+("0"+m%60).slice(-2);}
+function dur(o){return o.duration||o.series.duration||data.duration||90;}
+function cap(t){t=String(t);return t.charAt(0).toUpperCase()+t.slice(1);}
+
+function isBoth(){return selS.length>1;}
+function allG(){return selG.length>1;}
+function shortName(st){return st.short||String(st.name||st.id).charAt(0).toUpperCase();}
+function selStreams(){
+  var ss=data.streams||[];
+  var out=ss.filter(function(x){return selS.indexOf(x.id)>=0;});
+  return out.length?out:ss.slice(0,1);
+}
+function groupsOf(list){
+  var g=[],seen={};
+  list.forEach(function(st){(st.series||[]).forEach(function(s){
+    if(!seen[s.group]){seen[s.group]=1;g.push(s.group);}});});
+  return g;
+}
+/* неделя -> причина; в skips можно писать "ГГГГ-ММ-ДД" или {"date": ..., "reason": ...} */
+function skipSet(st){
+  var m={};
+  (st.skips||[]).forEach(function(k){
+    var dt=typeof k==="string"?k:k.date;
+    m[iso(monday(D(dt)))]=(typeof k==="string"?"":k.reason)||"нет занятий";
+  });
+  return m;
+}
+function ovMap(){var m={};(data.overrides||[]).forEach(function(o){m[o.series+"#"+o.idx]=o;});return m;}
+function colKey(s){return (s.time?wdIdx(D(s.start)):9)+"|"+(s.time||"");}
+
+/* Занятие уже прошло: вчерашнее и раньше — целиком, сегодняшнее — если кончилось.
+   Часы берутся у смотрящего, а расписание московское; для нас это одно и то же,
+   а ради других городов городить перевод зон незачем. Время не назначено —
+   сегодняшнее занятие прошедшим не считаем: неизвестно, кончилось ли оно. */
+function passed(o){
+  var day=iso(o.date),tk=iso(today());
+  if(day<tk)return true;
+  if(day>tk||o.tbd||!o.time)return false;
+  return nowMin()>=mins(o.time)+dur(o);
+}
+
+function lessonState(o){
+  if(o.cancel)return "Занятие отменено";
+  var p=POST[lkey(o)];
+  if(p&&p.rec&&p.post)return "Запись в закрытом канале";
+  if(passed(o))return "Запись ожидается";
+  if(!o.tbd&&o.time&&iso(o.date)===iso(today())&&nowMin()>=mins(o.time))return "Занятие идёт";
+  return o.tbd?"Время ещё не назначено":"Занятие запланировано";
+}
+
+function occurrences(s,st,sk){
+  var om=ovMap(),out=[],d=D(s.start),guard=0;
+  while(out.length<s.count&&guard++<400){
+    if(!sk[iso(monday(d))]){
+      var idx=out.length+1,o=om[s.id+"#"+idx];
+      var it={idx:idx,date:d,time:s.time||"",teacher:s.teacher||"",series:s,st:st,
+              tbd:!s.time,moved:false,delay:false,cancel:false,note:"",topic:"",sub:false,
+              orig:d,origTime:s.time||"",origTeacher:s.teacher||""};
+      if(o){
+        if(o.duration)it.duration=o.duration;
+        if(o.date){it.date=D(o.date);it.moved=true;}
+        // тот же день, но позже — задержка начала: занятие не переезжало,
+        // поэтому ни пометки «перенос», ни призрака на старом месте
+        if(o.time){it.time=o.time;it.tbd=false;if(o.delay)it.delay=true;else it.moved=true;}
+        if(o.teacher&&o.teacher!==s.teacher){it.teacher=o.teacher;it.sub=true;}
+        if(o.cancel){it.cancel=true;}
+        it.note=o.note||"";
+        it.topic=o.topic||"";
+      }
+      out.push(it);
+    }
+    d=addD(d,7);
+  }
+  /* idx — номер, присвоенный при создании, он не меняется и по нему ищутся правки.
+     pos — какое занятие по счёту фактически: после переноса «второе» может идти первым,
+     и на карточке честнее показывать порядок, а не исходный номер. Отменённые из
+     счёта выпадают и остаются при своём номере. */
+  var live=out.filter(function(o){return !o.cancel;}).slice().sort(function(a,b){
+    var ka=iso(a.date)+" "+(a.time||"99:99"),kb=iso(b.date)+" "+(b.time||"99:99");
+    return ka<kb?-1:ka>kb?1:a.idx-b.idx;
+  });
+  out.forEach(function(o){o.pos=o.idx;});
+  live.forEach(function(o,i){o.pos=i+1;});
+  return out;
+}
+
+function seriesOf(st,g){
+  return (st.series||[]).filter(function(s){return g?s.group===g:selG.indexOf(s.group)>=0;});
+}
+
+function current(){
+  var out=[];
+  selStreams().forEach(function(st){
+    var sk=skipSet(st);
+    seriesOf(st).forEach(function(s){out=out.concat(occurrences(s,st,sk));});
+  });
+  return out;
+}
+
+/* границы расписания: недели с занятиями плюс недели-пропуски. Без пропусков
+   сборы перед самым первым занятием не показать — стрелки до них не долистают */
+function span(occ){
+  var mn=null,mx=null;
+  function add(w){if(!mn||w<mn)mn=w;if(!mx||w>mx)mx=w;}
+  occ.forEach(function(o){add(iso(monday(o.date)));});
+  selStreams().forEach(function(st){
+    if(!seriesOf(st).length)return;
+    var sk=skipSet(st);
+    for(var w in sk)if(sk.hasOwnProperty(w))add(w);
+  });
+  return mn?{min:mn,max:mx}:null;
+}
+
+function weekTitle(d){
+  var e=addD(d,6);
+  if(d.getUTCMonth()===e.getUTCMonth())
+    return d.getUTCDate()+"–"+e.getUTCDate()+" "+MG[e.getUTCMonth()];
+  return d.getUTCDate()+" "+MG[d.getUTCMonth()]+" – "+e.getUTCDate()+" "+MG[e.getUTCMonth()];
+}
+
+function seg(items,cur,attr,right,tip){
+  if(items.length<2&&!right)return "";
+  return '<div class="seg'+(right?" right":"")+'">'+items.map(function(it){
+    return '<button'+(cur.indexOf(it.v)>=0?' class="on"':"")+(tip?' title="'+tip+'"':"")+" "+attr+'="'+
+           esc(it.v)+'">'+esc(it.t)+"</button>";
+  }).join("")+"</div>";
+}
+
+function barHtml(gs){
+  var ss=(data.streams||[]).map(function(x){return {v:x.id,t:x.name||x.id};});
+  var gg=gs.map(function(x){return {v:x,t:x};}),tip="Ctrl/\u2318 + клик или долгое нажатие \u2014 выбрать несколько";
+  return seg(ss,selS,"data-s",0,tip)+
+         seg(gg,selG,"data-g",0,tip)+
+         (mode==="schedule"
+            ? seg([{v:"week",t:"неделя"},{v:"all",t:"все занятия"}],[view],"data-v",1) : "")+
+         seg([{v:"schedule",t:"расписание"},{v:"recs",t:"записи"}],[mode],"data-m",1)+
+         (ss.length>1||gg.length>1?'<div class="hint">Несколько сразу: Ctrl/\u2318 + клик или долгое нажатие</div>':"");
+}
+
+function navHtml(){
+  var sp=span(current()),cw=curWeek();
+  var lo=sp?sp.min:week,hi=sp?sp.max:week;
+  var p=iso(addD(D(week),-7)),nx=iso(addD(D(week),7));
+  var h='<div class="nav">';
+  h+='<button class="arw" data-w="'+p+'"'+(p<lo?" disabled":"")+' aria-label="предыдущая неделя">‹</button>';
+  h+='<button class="arw" data-w="'+nx+'"'+(nx>hi?" disabled":"")+' aria-label="следующая неделя">›</button>';
+  h+='<div class="wt">'+weekTitle(D(week))+"</div>";
+  if(week===cw)h+='<span class="cur">текущая неделя</span>';
+  else if(cw>=lo&&cw<=hi)h+='<button class="tdy" data-w="'+cw+'">сегодня</button>';
+  return h+"</div>";
+}
+
+/* диапазон часов считается по всему курсу, чтобы сетка не прыгала при листании недель */
+/* шкала по обычному расписанию курсов; если на показанной неделе что-то перенесено за её пределы,
+   расширяется только для этой недели */
+function hourSpan(all,wk){
+  var a=null,b=null;
+  function add(t,d){
+    var st=mins(t),en=st+d;
+    if(a===null||st<a)a=st;
+    if(b===null||en>b)b=en;
+  }
+  all.forEach(function(o){if(o.origTime)add(o.origTime,dur(o));});
+  wk.forEach(function(o){if(!o.tbd)add(o.time,dur(o));});
+  if(a===null){a=17*60;b=20*60;}
+  return {h0:Math.max(0,Math.floor((a-30)/60)),h1:Math.min(24,Math.ceil((b+30)/60))};
+}
+
+function noteOf(o){
+  if(o.cancel)return "отменено"+(o.note?" · "+esc(o.note):"");
+  if(o.moved)return "перенос"+(o.note?" · "+esc(o.note):"");
+  /* в ячейку помещается одно слово, как «перенос»; полная фраза — в блоке изменений */
+  if(o.delay)return "задержка"+(o.note?" · "+esc(o.note):"");
+  if(o.sub)return "замена"+(o.note?" · "+esc(o.note):"");
+  return esc(o.note);
+}
+/* метка на блоке: поток одной буквой и класс, если выбрано «все» */
+/* метка потока одной буквой и класса — только когда выбрано несколько */
+function tagOf(o){
+  var t=[esc(shortName(o.st)),esc(o.series.group)];
+  return t.length?'<b class="etag">'+t.join(" ")+"</b>":"";
+}
+
+function evHtml(o,top,pos,rt){
+  var c=o.series.color||1,st=mins(o.time),en=st+dur(o),tg=tagOf(o),nt=noteOf(o);
+  if(o.ghost){
+    var g=o.of,to=g.cancel?"отменено":"перенесено на "+WDS[wdIdx(g.date)]+" "+fmt(g.date)+(g.time?" "+esc(g.time):"");
+    return '<div class="ev gh'+(rt?" rt":"")+'" title="'+esc(o.series.name)+", "+hm(st)+"\u2013"+hm(en)+
+      ", "+to+'" style="top:'+top+"px;--h:"+(dur(o)-2)+"px;"+pos+"border-color:var(--c"+c+"m);color:var(--c"+c+
+      'f)"><div class="r1"><span>'+hm(st)+"\u2013"+hm(en)+"</span></div>"+
+      '<div class="nm">'+esc(o.series.name)+'</div><div class="note">'+to+
+      (g.note?" \u00b7 "+esc(g.note):"")+"</div></div>";
+  }
+  var h='<div class="ev'+(o.cancel?" cancel":"")+(rt?" rt":"")+(HL===lkey(o)?" hilite":"")+
+        '" title="'+esc(o.series.name)+", "+hm(st)+"–"+hm(en)+
+        (o.teacher?", "+esc(o.teacher):"")+(isBoth()||allG()?", "+esc(o.st.name)+" "+esc(o.series.group):"")+
+        ", занятие "+o.pos+" из "+o.series.count+'" style="top:'+top+"px;--h:"+(dur(o)-2)+"px;"+pos+
+        "background:var(--c"+c+"b);color:var(--c"+c+'f)">';
+  h+='<div class="r1"><span>'+hm(st)+"\u2013"+hm(en)+"</span><i>"+o.pos+"/"+o.series.count+"</i></div>";
+  h+='<div class="nm">'+esc(o.series.name)+"</div>";
+  if(tg)h+='<div class="mt">'+tg+"</div>";
+  if(o.teacher)h+='<div class="mt">'+esc(o.teacher)+"</div>";
+  if(nt)h+='<div class="note">'+nt+"</div>";
+  /* в posts.js у занятия объект {post, rec}, а не строка: раньше сюда
+     подставлялся он целиком, и ссылка вела на «[object Object]» — то есть в 404 */
+  var pl=POST[lkey(o)];
+  if(!o.cancel)h+='<div class="lesson-state">'+lessonState(o)+"</div>";
+  if(!o.cancel&&pl&&pl.post)h+='<a class="plink" data-post="1" target="_blank" rel="noopener" href="'+
+    esc(pl.post)+'">'+(pl.rec?"Открыть запись в канале":"Открыть пост занятия")+"</a>";
+  return h+"</div>";
+}
+
+function slotText(d,t){return WDS[wdIdx(d)]+" "+fmt(d)+(t?" "+esc(t):"");}
+
+/* переносы, отмены, замены и комментарии, касающиеся показанной недели (откуда или куда) */
+function changesHtml(all){
+  var list=all.filter(function(o){
+    return (o.moved||o.delay||o.cancel||o.sub||o.note)&&
+      (iso(monday(o.orig))===week||iso(monday(o.date))===week);
+  }).sort(function(a,b){return a.date-b.date;});
+  if(!list.length)return "";
+  var h='<div class="chg"><div class="chh">Изменения на неделе</div>';
+  list.forEach(function(o){
+    var c=o.series.color||1,tg=tagOf(o),what=[];
+    if(o.cancel)what.push("<b>отменено</b> "+slotText(o.orig,o.origTime));
+    else if(o.moved)what.push("<b>перенос</b> "+slotText(o.orig,o.origTime)+" \u2192 "+slotText(o.date,o.time));
+    else if(o.delay)what.push("<b>начало задержано</b> "+slotText(o.date,"")+
+                              " <s>"+esc(o.origTime)+"</s> "+esc(o.time));
+    if(o.sub)what.push("<b>замена</b> "+esc(o.origTeacher||"\u2014")+" \u2192 "+esc(o.teacher));
+    if(o.note)what.push(esc(o.note));
+    h+='<div class="chr"><span class="dot" style="background:var(--c'+c+'f)"></span><div><div class="chn">'+
+       esc(o.series.name)+' <span class="chi">занятие '+o.pos+(tg?" \u00b7 "+tg:"")+"</span></div>"+
+       '<div class="chw">'+what.join(" \u00b7 ")+"</div></div></div>";
+  });
+  return h+"</div>";
+}
+
+function chipHtml(o){
+  var c=o.series.color||1,nt=noteOf(o),tg=tagOf(o);
+  return '<span class="chip" style="background:var(--c'+c+"b);color:var(--c"+c+'f)">'+(tg?tg+" · ":"")+"<b>"+
+         esc(o.series.name)+"</b>"+(o.teacher?" · "+esc(o.teacher):"")+
+         (nt?" · "+nt:"")+"<i>"+o.pos+"/"+o.series.count+"</i></span>";
+}
+
+/* раскладка дня как в календарях: колонки только у реально пересекающихся занятий,
+   блок растягивается вправо, пока там свободно. Возвращает число параллельных колонок */
+function layoutDay(list){
+  var ss=data.streams||[],comps=[],cur=null,lanes=0;
+  list.sort(function(a,b){
+    /* призраки левее и ниже настоящих занятий */
+    return mins(a.time)-mins(b.time)||(a.ghost?0:1)-(b.ghost?0:1)||ss.indexOf(a.st)-ss.indexOf(b.st)||
+           (a.series.group<b.series.group?-1:a.series.group>b.series.group?1:0);
+  });
+  list.forEach(function(o){
+    o.s0=mins(o.time);o.e0=o.s0+dur(o);
+    if(!cur||o.s0>=cur.end){cur={end:o.e0,cols:[],items:[]};comps.push(cur);}
+    var c=0;
+    while(c<cur.cols.length&&cur.cols[c]>o.s0)c++;
+    cur.cols[c]=o.e0;o.col=c;
+    cur.items.push(o);cur.end=Math.max(cur.end,o.e0);
+  });
+  comps.forEach(function(cp){
+    var n=cp.cols.length;
+    lanes=Math.max(lanes,n);
+    cp.items.forEach(function(o){
+      var sp=1;
+      for(var k=o.col+1;k<n;k++){
+        if(cp.items.some(function(x){return x.col===k&&x.s0<o.e0&&x.e0>o.s0;}))break;
+        sp++;
+      }
+      o.n=n;o.span=sp;
+    });
+  });
+  return lanes;
+}
+
+function weekHtml(){
+  var PAD=8,all=current(),i;
+  var occ=all.filter(function(o){return iso(monday(o.date))===week&&!o.cancel;});
+  var active=selStreams().filter(function(st){return seriesOf(st).length;});
+  var skipSt=active.filter(function(st){return skipSet(st)[week];});
+  var allOff=skipSt.length>0&&skipSt.length===active.length&&!occ.length;
+  var skips=skipSt.map(function(st){
+    var why=esc(cap(skipSet(st)[week]));
+    return '<span class="skl">'+(isBoth()?'<b>'+esc(shortName(st))+"</b> \u00b7 ":"")+why+"</span>";
+  });
+  var r=hourSpan(all,occ),H=(r.h1-r.h0)*60,tk=iso(today()),w0=D(week);
+  var now=new Date(),nowM=now.getHours()*60+now.getMinutes();
+  /* перенесённые и отменённые оставляем на прежнем месте прозрачным пунктиром */
+  var ghosts=all.filter(function(o){
+    return (o.moved||o.cancel)&&o.origTime&&iso(monday(o.orig))===week;
+  }).map(function(o){
+    return {ghost:true,of:o,series:o.series,st:o.st,idx:o.idx,pos:o.pos,tbd:false,
+            date:o.orig,time:o.origTime,teacher:o.origTeacher,cancel:false,moved:false,note:""};
+  });
+  var days=[];
+  for(i=0;i<7;i++){
+    days[i]=occ.filter(function(o){return !o.tbd&&wdIdx(o.date)===i;}).concat(
+      ghosts.filter(function(o){return wdIdx(o.date)===i;}));
+    layoutDay(days[i]);
+  }
+  var h='<div class="cal"><div class="cgrid"><div class="crow chead"><div class="gut"></div>';
+  for(i=0;i<7;i++){
+    var dd=addD(w0,i);
+    h+='<div class="dhd'+(iso(dd)===tk?" td":"")+'"><span class="dw">'+WDS[i]+
+       '</span><span class="dn">'+dd.getUTCDate()+"</span></div>";
+  }
+  h+="</div>";
+  var tbd=occ.filter(function(o){return o.tbd;});
+  if((skips.length&&!allOff)||tbd.length){
+    h+='<div class="crow allday"><div class="gut">'+(tbd.length?"без<br>времени":"")+'</div><div class="adc">';
+    if(skips.length&&!allOff)h+='<div class="skipb">'+skips.join("")+"</div>";
+    tbd.forEach(function(o){h+=chipHtml(o);});
+    h+="</div></div>";
+  }
+  h+='<div class="crow cbody" style="height:'+(H+2*PAD)+'px">';
+  /* вся неделя без занятий: один заштрихованный слой поверх сетки, чтобы узор не рвался по дням */
+  if(allOff)h+='<div class="offov"><div class="offl">'+skips.join("")+'<span class="skn">занятий нет</span></div></div>';
+  h+='<div class="gut">';
+  for(var hr=r.h0;hr<r.h1;hr++)h+='<div class="hl" style="top:'+((hr-r.h0)*60+PAD)+'px">'+hr+":00</div>";
+  h+="</div>";
+  for(i=0;i<7;i++){
+    var d=addD(w0,i),isT=iso(d)===tk;
+    h+='<div class="dcol'+(isT?" td":"")+'">';
+    days[i].forEach(function(o){
+      /* пересекающиеся лежат карточками: более позднее сверху со сдвигом вправо */
+      var off=Math.min(o.col,2)*30;
+      var pos="left:calc("+off+"% + 2px);width:calc("+(100-off)+"% - 4px);"+
+              (o.col?"z-index:"+(o.col+1)+";box-shadow:0 0 0 1.5px var(--bg),-3px 3px 8px rgba(0,0,0,.14);":"");
+      h+=evHtml(o,o.s0-r.h0*60+PAD,pos,i>=4);
+    });
+    if(isT&&nowM>=r.h0*60&&nowM<=r.h1*60)h+='<div class="nowl" style="top:'+(nowM-r.h0*60+PAD)+'px"></div>';
+    h+="</div>";
+  }
+  return h+"</div></div></div>"+changesHtml(all);
+}
+
+/* порядок предметов в таймлайне; предмет берётся из поля subject или угадывается по названию */
+var SUBJ=[["sferka",/сферк/i],["nebmeh",/небмех|небесн/i],["astro",/астро/i],["optics",/оптик/i],["prac",/прак|prac/i]];
+function subjRank(s){
+  for(var i=0;i<SUBJ.length;i++)
+    if(s.subject?s.subject===SUBJ[i][0]:SUBJ[i][1].test(s.name))return i;
+  return SUBJ.length;
+}
+
+function slotLabel(s){return s.time?WDS[wdIdx(D(s.start))]+" "+s.time:"время уточняется";}
+
+/* таймлайн: всем элементам задаётся строка грида явно, а в неделях-пропусках ячейки не выводятся —
+   их место занимает одна заштрихованная плашка на весь блок строк, поэтому узор не рвётся */
+function gridHtml(){
+  var cw=curWeek(),secs=[],allOcc=[];
+  selStreams().forEach(function(st){
+   var sk=skipSet(st);
+   groupsOf([st]).filter(function(g){return selG.indexOf(g)>=0;}).forEach(function(g){
+    var rows=seriesOf(st,g).map(function(s){return {s:s,occ:occurrences(s,st,sk)};})
+      .filter(function(r){return r.occ.length;});
+    if(!rows.length)return;
+    rows.sort(function(a,b){
+      return subjRank(a.s)-subjRank(b.s)||(a.occ[0].date-b.occ[0].date);
+    });
+    var own=[];
+    rows.forEach(function(r){own=own.concat(r.occ);});
+    allOcc=allOcc.concat(own);
+    var ss=span(own),on={};
+    Object.keys(sk).forEach(function(w){if(w>=ss.min&&w<=ss.max)on[w]=sk[w];});
+    secs.push({st:st,g:g,sk:on,rows:rows});
+   });
+  });
+  if(!secs.length)return '<div class="empty">Занятий нет.</div>';
+  var sp=span(allOcc),weeks=[];
+  for(var d=D(sp.min);iso(d)<=sp.max;d=addD(d,7))weeks.push(iso(d));
+  var N=weeks.length,i=0,R=1;
+  var h='<div class="tl"><div class="tg" style="grid-template-columns:var(--tn) repeat('+N+',minmax(34px,1fr))">';
+  h+='<div class="tn hd" style="grid-row:1 / span 2;grid-column:1"></div>';
+  while(i<N){
+    var m=D(weeks[i]).getUTCMonth(),j=i;
+    while(j<N&&D(weeks[j]).getUTCMonth()===m)j++;
+    h+='<div class="tmo'+(i?"":" first")+'" style="grid-row:1;grid-column:'+(i+2)+" / span "+(j-i)+'">'+MN[m]+"</div>";
+    i=j;
+  }
+  weeks.forEach(function(w,wi){
+    var off=secs.every(function(x){return x.sk[w];});
+    h+='<div class="twk'+(w===cw?" now":"")+(off?" off":"")+'" style="grid-row:2;grid-column:'+(wi+2)+
+       '" data-go="'+w+'" title="неделя '+weekTitle(D(w))+'"><span>'+D(w).getUTCDate()+"</span></div>";
+  });
+  R=3;
+  secs.forEach(function(sec,si){
+    if(isBoth()||allG()){
+      var ttl=[];
+      if(isBoth())ttl.push(esc(sec.st.name||sec.st.id));
+      if(allG())ttl.push(esc(sec.g));
+      h+='<div class="tsec" style="grid-row:'+R+'"><span>'+ttl.join(" \u00b7 ")+"</span></div>";
+      R++;
+    }
+    var r0=R,n=sec.rows.length;
+    for(i=0;i<N;){
+      if(!sec.sk[weeks[i]]){i++;continue;}
+      var j=i,why=sec.sk[weeks[i]];
+      while(j<N&&sec.sk[weeks[j]]===why)j++;
+      h+='<div class="tskip'+(j-i>2?" wide":"")+'" style="grid-row:'+r0+" / span "+n+";grid-column:"+(i+2)+
+         " / span "+(j-i)+'" title="'+esc(cap(why))+'"><span>'+esc(why)+"</span></div>";
+      i=j;
+    }
+    var last=null;
+    sec.rows.forEach(function(r,ri){
+      var s=r.s,c=s.color||1,k=subjRank(s),sep=(ri>0&&k!==last)||(ri===0&&si>0&&!isBoth()&&!allG()),by={};
+      last=k;
+      r.occ.forEach(function(o){var w=iso(monday(o.date));(by[w]=by[w]||[]).push(o);});
+      h+='<div class="tn'+(sep?" sep":"")+'" style="grid-row:'+R+';grid-column:1"><div class="nm">'+esc(s.name)+
+         '</div><div class="mt">'+slotLabel(s)+(s.teacher?" · "+esc(s.teacher):"")+"</div></div>";
+      weeks.forEach(function(w,wi){
+        if(sec.sk[w])return;
+        var cls="tcl"+(sep?" sep":"")+(w===cw?" now":""),list=by[w],pos='style="grid-row:'+R+";grid-column:"+(wi+2)+'"';
+        if(!list){h+='<div class="'+cls+'" '+pos+"></div>";return;}
+        var o=list[0],pv=wi>0&&by[weeks[wi-1]],nx=wi<N-1&&by[weeks[wi+1]];
+        var nums=list.map(function(x){return x.idx;}).join(",");
+        var tip=esc(s.name)+(isBoth()||allG()?" ("+esc(sec.st.name)+", "+esc(sec.g)+")":"")+", занятие "+nums+" из "+s.count+
+                (o.tbd?"":", "+WDS[wdIdx(o.date)]+" "+fmt(o.date)+" "+esc(o.time))+
+                (o.cancel?", отменено":"")+(o.note?", "+esc(o.note):"");
+        h+='<div class="'+cls+'" '+pos+'><div class="tbar'+(pv?"":" l")+(nx?"":" r")+(o.cancel?" x":"")+
+           (o.moved?" mv":"")+'" data-go="'+w+'" title="'+tip+'" style="background:var(--c'+c+"b);color:var(--c"+c+'f)">'+
+           nums+"</div></div>";
+      });
+      R++;
+    });
+  });
+  return h+"</div></div>";
+}
+
+/* записи: прошедшие занятия строчками, клик ведёт на пост в канале.
+   У занятия без записи строка серая и без ссылки — видно, что её ещё не прислали,
+   а не что про неё забыли */
+function recsHtml(){
+  var secs=[];
+  selStreams().forEach(function(st){
+    var sk=skipSet(st);
+    groupsOf([st]).filter(function(g){return selG.indexOf(g)>=0;}).forEach(function(g){
+      var rows=seriesOf(st,g).map(function(s){
+        return {s:s,occ:occurrences(s,st,sk).filter(function(o){
+          return !o.cancel&&passed(o);
+        })};
+      }).filter(function(r){return r.occ.length;});
+      if(!rows.length)return;
+      rows.sort(function(a,b){
+        return subjRank(a.s)-subjRank(b.s)||(a.occ[0].date-b.occ[0].date);
+      });
+      secs.push({st:st,g:g,rows:rows});
+    });
+  });
+  if(!secs.length)return '<div class="empty">Прошедших занятий пока нет.</div>';
+
+  var h='<div class="recs"><p class="rec-help">Записи открываются в закрытом Telegram-канале. Нужен доступ к каналу: если пост не открывается, обратитесь к организатору.</p>';
+  secs.forEach(function(sec){
+    if(isBoth()||allG())
+      h+='<div class="rhd">'+esc(sec.st.name)+" \u00b7 "+esc(sec.g)+"</div>";
+    sec.rows.forEach(function(r){
+      h+='<div class="rcourse"><div class="rname" style="--rc:var(--c'+
+         (r.s.color||1)+'m)">'+esc(r.s.name)+"</div>";
+      r.occ.forEach(function(o){
+        var p=POST[lkey(o)];
+        var when=WDS[wdIdx(o.date)]+" "+fmt(o.date)+(o.tbd?"":" "+esc(o.time));
+        var inner='<span class="rnum">'+o.pos+'</span><span class="rwhen">'+when+"</span>"+
+                  '<span class="rwho">'+esc(o.teacher||"")+"</span>";
+        var topic=o.topic?'<span class="rtopic">'+esc(o.topic)+"</span>":"";
+        h+=p&&p.rec&&p.post
+          ? '<a class="rrow" href="'+esc(p.post)+'" target="_blank" rel="noopener">'+
+            inner+'<span class="rgo">'+lessonState(o)+"</span>"+topic+"</a>"
+          : '<div class="rrow off">'+inner+'<span class="rgo">'+lessonState(o)+"</span>"+topic+"</div>";
+      });
+      h+="</div>";
+    });
+  });
+  return h+"</div>";
+}
+
+function render(){
+  var ss=data.streams||[],ids=ss.map(function(x){return x.id;});
+  selS=selS.filter(function(x){return ids.indexOf(x)>=0;});
+  if(!selS.length&&ids.length)selS=[ids[0]];
+  var gs=groupsOf(selStreams());
+  selG=selG.filter(function(x){return gs.indexOf(x)>=0;});
+  if(!selG.length&&gs.length)selG=[gs[0]];
+  var sp=span(current());
+  if(!week)week=curWeek();
+  if(sp){if(week<sp.min)week=sp.min;if(week>sp.max)week=sp.max;}
+  document.getElementById("bar").innerHTML=barHtml(gs);
+  var recs=mode==="recs";
+  document.getElementById("nav").innerHTML=(!recs&&view==="week")?navHtml():"";
+  document.getElementById("view").innerHTML=recs?recsHtml():(view==="week"?weekHtml():gridHtml());
+}
+
+function up(el,attr){
+  while(el&&el.getAttribute){
+    var v=el.getAttribute(attr);
+    if(v!==null)return v;
+    el=el.parentNode;
+  }
+  return null;
+}
+
+/* обычный клик выбирает один вариант, с Ctrl/⌘/Shift или долгим нажатием — добавляет или убирает */
+function pick(sel,v,multi){
+  if(!multi)return [v];
+  var i=sel.indexOf(v);
+  if(i<0)return sel.concat([v]);
+  return sel.length>1?sel.slice(0,i).concat(sel.slice(i+1)):sel;
+}
+
+var lpTimer=null,lpDone=false;
+document.addEventListener("touchstart",function(ev){
+  var s=up(ev.target,"data-s"),g=up(ev.target,"data-g");
+  lpDone=false;
+  if(s===null&&g===null)return;
+  lpTimer=setTimeout(function(){
+    lpDone=true;
+    if(s!==null)selS=pick(selS,s,true);else selG=pick(selG,g,true);
+    if(navigator.vibrate)navigator.vibrate(15);
+    render();
+  },450);
+},{passive:true});
+["touchend","touchmove","touchcancel"].forEach(function(t){
+  document.addEventListener(t,function(){clearTimeout(lpTimer);},{passive:true});
+});
+
+/* Записи ищут по всей школе, а не в выбранном потоке. Иначе вкладка почти всегда
+   пуста — у выбранного по умолчанию потока прошедших занятий с записью может не
+   быть вовсе, — и человек решает, что записей нет. Выбор расписания запоминаем
+   и возвращаем, когда он уходит обратно. */
+function setMode(m){
+  if(m==="recs"){
+    keepS=selS.slice();keepG=selG.slice();
+    selS=(data.streams||[]).map(function(x){return x.id;});
+    selG=groupsOf(selStreams()).slice();
+  }else if(keepS){selS=keepS;selG=keepG;keepS=keepG=null;}
+  mode=m;
+}
+
+document.addEventListener("click",function(ev){
+  if(lpDone){lpDone=false;return;}
+  if(up(ev.target,"data-post")!==null)return;   /* ссылка на пост открывается как обычная */
+  var el=ev.target,evb=null;
+  while(el&&el.classList){if(el.classList.contains("ev")){evb=el;break;}el=el.parentNode;}
+  var opened=document.querySelectorAll?document.querySelectorAll(".ev.open"):[];
+  for(var k=0;k<opened.length;k++)if(opened[k]!==evb)opened[k].classList.remove("open");
+  if(evb){evb.classList.toggle("open");return;}
+  var multi=ev.ctrlKey||ev.metaKey||ev.shiftKey;
+  var s=up(ev.target,"data-s"),g=up(ev.target,"data-g"),
+      v=up(ev.target,"data-v"),w=up(ev.target,"data-w"),go=up(ev.target,"data-go"),
+      md=up(ev.target,"data-m");
+  if(s!==null)selS=pick(selS,s,multi);
+  else if(g!==null)selG=pick(selG,g,multi);
+  else if(md!==null){if(md!==mode)setMode(md);}
+  else if(v!==null)view=v;
+  else if(w!==null)week=w;
+  else if(go!==null){week=go;view="week";}
+  else return;
+  render();
+});
+
+var j=(typeof SCHEDULE!=="undefined")?SCHEDULE:null;
+if(j&&!j.streams&&j.series)j.streams=[{id:"all",name:"Все",skips:j.skips||[],series:j.series}];
+if(j&&j.streams&&j.streams.length){
+  data=j;
+  document.getElementById("title").textContent=j.title||"Расписание";
+  document.getElementById("sub").textContent=j.subtitle||"";
+  if(Q.stream)selS=Q.stream.split(",");
+  if(Q.group)selG=Q.group.split(",");
+  if(Q.view)view=Q.view;
+  /* прямая ссылка на записи открывается так же, как переключение вкладки:
+     по всей школе, если поток и группа не заданы явно */
+  if(Q.mode==="recs"&&!Q.stream&&!Q.group)setMode("recs");
+  else if(Q.mode)mode=Q.mode;
+  if(Q.week)week=iso(monday(D(Q.week)));
+  if(Q.shot)document.body.className+=" shot";
+  render();
+}else{
+  document.getElementById("msg").textContent=
+    "Не удалось загрузить schedule.js: файл рядом с index.html или ошибка в его синтаксисе.";
+}
+</script>
+</body>
+</html>
