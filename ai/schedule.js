@@ -10,7 +10,7 @@ var SCHEDULE =
       "short": "Регион",
       "skips": [],
       "series": [
-        {"id": "ai-basic-math", "group": "Регион", "name": "Математика", "subject": "math", "teacher": "Илларионов Кирилл Алексеевич", "start": "2026-11-11", "time": "17:30", "duration": 90, "count": 7, "color": 3},
+        {"id": "ai-basic-math", "group": "Регион", "name": "Математика", "subject": "math", "teacher": "Илларионов К.", "start": "2026-11-11", "time": "17:30", "duration": 90, "count": 7, "color": 3},
         {"id": "ai-basic-ml", "group": "Регион", "name": "ML", "subject": "ml", "teacher": "Кистин Матвей", "start": "2026-11-12", "time": "19:30", "duration": 90, "count": 7, "color": 2}
       ]
     },
