@@ -426,15 +426,14 @@ function barHtml(gs){
 }
 
 function navHtml(){
-  var sp=span(current()),cw=curWeek();
-  var lo=sp?sp.min:week,hi=sp?sp.max:week;
+  var cw=curWeek();
   var p=iso(addD(D(week),-7)),nx=iso(addD(D(week),7));
   var h='<div class="nav">';
-  h+='<button class="arw" data-w="'+p+'"'+(p<lo?" disabled":"")+' aria-label="предыдущая неделя">‹</button>';
-  h+='<button class="arw" data-w="'+nx+'"'+(nx>hi?" disabled":"")+' aria-label="следующая неделя">›</button>';
+  h+='<button class="arw" data-w="'+p+'" aria-label="предыдущая неделя">‹</button>';
+  h+='<button class="arw" data-w="'+nx+'" aria-label="следующая неделя">›</button>';
   h+='<div class="wt">'+weekTitle(D(week))+"</div>";
   if(week===cw)h+='<span class="cur">текущая неделя</span>';
-  else if(cw>=lo&&cw<=hi)h+='<button class="tdy" data-w="'+cw+'">сегодня</button>';
+  else h+='<button class="tdy" data-w="'+cw+'">сегодня</button>';
   return h+"</div>";
 }
 
@@ -620,7 +619,7 @@ function weekHtml(){
     if(isT&&nowM>=r.h0*60&&nowM<=r.h1*60)h+='<div class="nowl" style="top:'+(nowM-r.h0*60+PAD)+'px"></div>';
     h+="</div>";
   }
-  return h+"</div></div></div>"+changesHtml(all);
+  return (!occ.length&&!ghosts.length&&!allOff?'<div class="empty" role="status">На этой неделе для выбранных потока и классов занятия пока не опубликованы.</div>':"")+h+"</div></div></div>"+changesHtml(all);
 }
 
 /* порядок предметов в таймлайне; предмет берётся из поля subject или угадывается по названию */
@@ -768,9 +767,7 @@ function render(){
   var gs=groupsOf(selStreams());
   selG=selG.filter(function(x){return gs.indexOf(x)>=0;});
   if(!selG.length&&gs.length)selG=[gs[0]];
-  var sp=span(current());
   if(!week)week=curWeek();
-  if(sp){if(week<sp.min)week=sp.min;if(week>sp.max)week=sp.max;}
   document.getElementById("bar").innerHTML=barHtml(gs);
   var recs=mode==="recs";
   document.getElementById("nav").innerHTML=(!recs&&view==="week")?navHtml():"";

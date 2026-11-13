@@ -1,0 +1,24 @@
+const {readFileSync}=require('node:fs');
+const {runInNewContext}=require('node:vm');
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+for(const file of ['index.html','ai/index.html']) test(`${file}: selected empty week is never replaced by the last lesson week`,()=>{
+ const nodes={};
+ const ctx={console,Date,Intl,location:{search:''},document:{addEventListener(){},getElementById(id){return nodes[id]||={}}},setTimeout,clearTimeout};
+ const scripts=[...readFileSync(file,'utf8').matchAll(/<script>([\s\S]*?)<\/script>/g)];
+ runInNewContext(scripts.at(-1)[1],ctx);
+ ctx.today=()=>ctx.D('2026-11-13');
+ ctx.data={streams:[{id:'v',name:'Всерос',series:[{id:'a',name:'Астрофиз',group:'7-9',start:'2026-11-09',time:'17:00',count:1}]}]};
+ ctx.selS=['v'];ctx.selG=['7-9'];ctx.week='2026-11-16';ctx.render();
+ assert.equal(ctx.week,'2026-11-16');
+ assert.match(nodes.nav.innerHTML,/16–22 ноября/);
+ assert.doesNotMatch(nodes.nav.innerHTML,/disabled/);
+ assert.match(nodes.nav.innerHTML,/сегодня/);
+ assert.match(nodes.view.innerHTML,/занятия пока не опубликованы/);
+ ctx.week='2026-11-09';ctx.render();
+ assert.doesNotMatch(nodes.view.innerHTML,/занятия пока не опубликованы/);
+ ctx.week='2026-11-02';ctx.render();assert.equal(ctx.week,'2026-11-02');
+ ctx.data.streams[0].skips=[{date:'2026-11-02',reason:'очные сборы'}];ctx.render();
+ assert.match(nodes.view.innerHTML,/Очные сборы/);
+ assert.doesNotMatch(nodes.view.innerHTML,/занятия пока не опубликованы/);
+});
