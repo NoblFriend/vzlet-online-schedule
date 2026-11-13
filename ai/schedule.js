@@ -11,7 +11,7 @@ var SCHEDULE =
       "skips": [],
       "series": [
         {"id": "ai-basic-math", "group": "Регион", "name": "Математика", "subject": "math", "teacher": "Илларионов К.", "start": "2026-11-11", "time": "17:30", "duration": 90, "count": 7, "color": 3},
-        {"id": "ai-basic-ml", "group": "Регион", "name": "ML", "subject": "ml", "teacher": "Кистин Матвей", "start": "2026-11-12", "time": "19:30", "duration": 90, "count": 7, "color": 2}
+        {"id": "ai-basic-ml", "group": "Регион", "name": "ML", "subject": "ml", "teacher": "Кистин М.", "start": "2026-11-12", "time": "19:30", "duration": 90, "count": 7, "color": 2}
       ]
     },
     {
@@ -21,7 +21,7 @@ var SCHEDULE =
       "skips": [],
       "series": [
         {"id": "ai-advanced-math", "group": "Всерос", "name": "Математика", "subject": "math", "teacher": "Акиньщиков А.", "start": "2026-11-12", "time": "17:30", "duration": 90, "count": 7, "color": 3},
-        {"id": "ai-advanced-ml", "group": "Всерос", "name": "ML", "subject": "ml", "teacher": "Лебедев Иван Александрович", "start": "2026-11-13", "time": "17:30", "duration": 90, "count": 7, "color": 2}
+        {"id": "ai-advanced-ml", "group": "Всерос", "name": "ML", "subject": "ml", "teacher": "Лебедев И.", "start": "2026-11-13", "time": "17:30", "duration": 90, "count": 7, "color": 2}
       ]
     }
   ],
