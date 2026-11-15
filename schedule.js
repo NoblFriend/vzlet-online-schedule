@@ -41,7 +41,8 @@ var SCHEDULE =
         {"id": "оптика-i-10-11", "group": "10-11", "name": "Оптика I", "start": "2026-11-16", "count": 2, "color": 4},
         {"id": "оптика-ii-10-11", "group": "10-11", "name": "Оптика II", "start": "2026-12-14", "count": 1, "color": 4},
         {"id": "астрофизика-ii-7-9", "group": "7-9", "name": "Астрофизика II", "subject": "astro", "teacher": "Ахмадуллин Д.", "start": "2026-11-24", "time": "17:30", "duration": 90, "count": 1, "dates": [{"date": "2026-11-24", "time": "17:30"}], "color": 1},
-        {"id": "регион-оптика-i-7-9", "group": "7-9", "name": "Оптика I", "subject": "optics", "teacher": "Ахмадуллин Д.", "start": "2026-12-08", "time": "19:30", "duration": 90, "count": 2, "dates": [{"date": "2026-12-08", "time": "19:30"}, {"date": "2026-12-15", "time": "19:30"}], "color": 4}
+        {"id": "регион-оптика-i-7-9", "group": "7-9", "name": "Оптика I", "subject": "optics", "teacher": "Ахмадуллин Д.", "start": "2026-12-08", "time": "19:30", "duration": 90, "count": 2, "dates": [{"date": "2026-12-08", "time": "19:30"}, {"date": "2026-12-15", "time": "19:30"}], "color": 4},
+        {"id": "регион-сферка-ii-10-11", "group": "10-11", "name": "Сферка II", "subject": "sferka", "teacher": "Мигаль Т.", "start": "2026-11-27", "time": "17:30", "duration": 90, "count": 1, "dates": [{"date": "2026-11-27", "time": "17:30"}], "color": 2}
       ]
     }
   ],
