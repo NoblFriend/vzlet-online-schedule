@@ -40,7 +40,8 @@ var SCHEDULE =
         {"id": "регион-сферка-ii-10-11", "group": "10-11", "name": "Сферка II", "subject": "sferka", "teacher": "Мигаль Т.", "start": "2026-11-27", "time": "17:30", "duration": 90, "count": 1, "dates": [{"date": "2026-11-27", "time": "17:30"}], "color": 2},
         {"id": "регион-оптика-i-10-11", "group": "10-11", "name": "Оптика I", "subject": "optics", "teacher": "Акиньщиков А.", "start": "2026-11-25", "time": "17:00", "duration": 90, "count": 2, "dates": [{"date": "2026-11-25", "time": "17:00"}, {"date": "2026-12-09", "time": "17:00"}], "color": 4},
         {"id": "регион-оптика-ii-10-11", "group": "10-11", "name": "Оптика II", "subject": "optics", "teacher": "Акиньщиков А.", "start": "2026-12-16", "time": "17:00", "duration": 90, "count": 1, "dates": [{"date": "2026-12-16", "time": "17:00"}], "color": 4},
-        {"id": "регион-небмех-ii-10-11", "group": "10-11", "name": "Небмех II", "subject": "nebmeh", "teacher": "Акиньщиков А.", "start": "2026-11-18", "time": "17:00", "duration": 90, "count": 1, "dates": [{"date": "2026-11-18", "time": "17:00"}], "color": 3}
+        {"id": "регион-небмех-ii-10-11", "group": "10-11", "name": "Небмех II", "subject": "nebmeh", "teacher": "Акиньщиков А.", "start": "2026-11-18", "time": "17:00", "duration": 90, "count": 1, "dates": [{"date": "2026-11-18", "time": "17:00"}], "color": 3},
+        {"id": "регион-астрофиз-ii-10-11", "group": "10-11", "name": "Астрофиз II", "subject": "astro", "teacher": "Мигаль Т.", "start": "2026-12-11", "time": "17:30", "duration": 90, "count": 2, "dates": [{"date": "2026-12-11", "time": "17:30"}, {"date": "2026-12-18", "time": "17:30"}], "color": 1}
       ]
     }
   ],
