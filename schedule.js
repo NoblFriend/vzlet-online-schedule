@@ -86,7 +86,7 @@ var SCHEDULE =
     {"series": "небмех-i-7-9", "idx": 4, "topic": "Небесная механика 1. Занятие 4."},
     {"series": "небмех-i-7-9", "idx": 5, "topic": "Небесная механика 1. Занятие 5."},
     {"series": "небмех-i-7-9", "idx": 6, "time": "19:30", "delay": true},
-    {"series": "небмех-i-7-9", "idx": 7, "time": "19:30", "delay": true},
+    {"series": "небмех-i-7-9", "idx": 7, "date": "2026-11-19"},
     {"series": "небмех-ii-7-9", "idx": 1, "time": "19:30", "delay": true},
     {"series": "небмех-ii-7-9", "idx": 2, "time": "19:30", "delay": true},
     {"series": "небмех-ii-7-9", "idx": 3, "time": "19:30", "delay": true},
